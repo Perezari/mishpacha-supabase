@@ -11,6 +11,7 @@ import * as db from './db.js';
 import { DAILY_TASKS } from '../data.js';
 
 const CHILD_SESSION_KEY = 'mishpacha_child_session';
+const LAST_RESET_KEY   = 'mishpacha_last_reset';  // stores 'YYYY-MM-DD' of last daily reset
 
 export function useAppData() {
   const [session,      setSession]      = useState(null);
@@ -27,6 +28,35 @@ export function useAppData() {
   const themeId  = childSession
     ? (kids.find(k => k.id === childSession.kidId)?.themeId || 'SUNNY')
     : (profile?.theme_id || 'C');
+
+/* ── Daily reset ── */
+  const checkAndResetDaily = async (fid) => {
+    const now = new Date();
+    // מחסירים 8 שעות כדי ש"יום חדש" יתחיל רק ב-08:00 בבוקר
+    now.setHours(now.getHours() - 8);
+    
+    // מרכיבים מחרוזת תאריך מקומי (YYYY-MM-DD)
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const logicalToday = `${year}-${month}-${day}`;
+
+    const last = localStorage.getItem(LAST_RESET_KEY);
+    if (last === logicalToday) return;
+
+    try {
+      await db.resetDailyTasks(fid);
+      localStorage.setItem(LAST_RESET_KEY, logicalToday);
+      
+      // עדכון הסטייט המקומי כדי שהמשימות יופיעו מיד
+      setKids(ks => ks.map(k => ({
+        ...k,
+        tasks: k.tasks.map(t =>
+          t.isDaily && t.status !== 'todo' ? { ...t, status: 'todo' } : t
+        ),
+      })));
+    } catch (_) {}
+  };
 
   /* ── Load parent data ─────────────────────────────── */
   const loadParent = useCallback(async (sess) => {
@@ -49,6 +79,7 @@ export function useAppData() {
 
       setProfile(prof);
       await reloadForFamily(prof.family_id);
+      await checkAndResetDaily(prof.family_id);
     } catch (e) {
       setError(e.message || 'שגיאה בטעינה');
     } finally {
@@ -64,6 +95,7 @@ export function useAppData() {
       const { data: fam } = await db.getFamily(cs.familyId);
       setFamily(fam || null);
       await reloadForFamily(cs.familyId);
+      await checkAndResetDaily(cs.familyId);
     } catch (e) {
       setError(e.message || 'שגיאה בטעינה');
     } finally {
@@ -86,6 +118,8 @@ export function useAppData() {
   const reloadKids = useCallback(() => {
     if (familyId) reloadForFamily(familyId);
   }, [familyId]);
+
+
 
   /* ── Boot ─────────────────────────────────────────── */
   useEffect(() => {
@@ -207,7 +241,7 @@ export function useAppData() {
       const newKid = { ...db.normalizeKid(data), tasks: [] };
       const dailyResults = await Promise.all(
         DAILY_TASKS.map(dt =>
-          db.createTask(fid, { kidId: newKid.id, title: dt.title, desc: dt.desc, reward: dt.reward, requiresApproval: true })
+          db.createTask(fid, { kidId: newKid.id, title: dt.title, desc: dt.desc, reward: dt.reward, requiresApproval: true, isDaily: true })
         )
       );
       const createdTasks = dailyResults.filter(r => !r.error).map(r => db.normalizeTask(r.data));

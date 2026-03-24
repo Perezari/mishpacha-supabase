@@ -89,6 +89,7 @@ export const createTask = (familyId, task) =>
     description:       task.desc || null,
     reward:            task.reward,
     requires_approval: task.requiresApproval,
+    is_daily:          task.isDaily ?? false,
     status:            'todo',
   }).select().single();
 
@@ -142,6 +143,16 @@ export const updateKidProfile = (kidId, { name, age, avatar }) => {
   return supabase.from('kids').update(map).eq('id', kidId).select().single();
 };
 
+/* ── DAILY RESET ────────────────────────────────────── */
+// Reset all daily tasks for a family back to 'todo'
+export const resetDailyTasks = (familyId) =>
+  supabase
+    .from('tasks')
+    .update({ status: 'todo', completed_at: null })
+    .eq('family_id', familyId)
+    .eq('is_daily', true)
+    .neq('status', 'todo');   // skip already-todo (no-op optimization)
+
 /* ── NORMALIZERS ─────────────────────────────────────── */
 export const normalizeKid = (row) => ({
   id: row.id, familyId: row.family_id,
@@ -156,5 +167,6 @@ export const normalizeTask = (row) => ({
   id: row.id, kidId: row.kid_id, familyId: row.family_id,
   title: row.title, desc: row.description,
   reward: Number(row.reward), status: row.status,
-  requiresApproval: row.requires_approval, createdAt: row.created_at,
+  requiresApproval: row.requires_approval, isDaily: !!row.is_daily,
+  createdAt: row.created_at,
 });
