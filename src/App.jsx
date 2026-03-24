@@ -71,11 +71,14 @@ export default function App() {
     ? (activeKid?.name || 'ילד/ה')
     : (family?.name || 'הורה');
 
-  /* ── PWA Dynamic Theme Color ────────────────────── */
+/* ── PWA Dynamic Theme Color ────────────────────── */
   useEffect(() => {
     if (!effT) return;
     
-    const targetColor = effT.primary || '#ffffff'; 
+    // שולף את קוד ה-HEX הראשון מתוך מחרוזת הגרדיאנט (זה הצבע העליון)
+    const match = effT.bgGrad.match(/#[0-9a-fA-F]{3,8}/);
+    // אם מצא צבע עליון - ישתמש בו, אחרת יחזור ל-primary
+    const topColor = match ? match[0] : (effT.primary || '#ffffff'); 
 
     let metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (!metaThemeColor) {
@@ -83,12 +86,10 @@ export default function App() {
       metaThemeColor.name = 'theme-color';
       document.head.appendChild(metaThemeColor);
     }
-    metaThemeColor.setAttribute('content', targetColor);
+    metaThemeColor.setAttribute('content', topColor);
 
-    // השורה החדשה! נשנה את הרקע של כל העמוד (מחוץ לאפליקציה של הריאקט) 
-    // כדי שספארי יבין שזה צבע הרקע העליון
-    document.body.style.backgroundColor = targetColor; 
-
+    // מעדכן גם את צבע הרקע של ה-body כדי שספארי יבין שזה הרקע
+    document.body.style.backgroundColor = topColor; 
   }, [effT]); 
   /* ───────────────────────────────────────────────── */
 
