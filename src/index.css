@@ -11,8 +11,25 @@ body {
   font-family: 'Heebo', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* ── PWA App Lock: מניעת העתקה וזום כפול ── */
+  -webkit-user-select: none; /* תמיכה באייפון וספארי */
+  user-select: none;         /* תמיכה בשאר הדפדפנים */
+  touch-action: manipulation;/* מונע זום בלחיצה כפולה מהירה */
+  /* ────────────────────────────────────────── */
 }
-input, select, textarea, button { font-family: 'Heebo', sans-serif; }
+
+/* ── החזרת היכולת לבחור טקסט רק בשדות קלט ── */
+input, select, textarea { 
+  font-family: 'Heebo', sans-serif; 
+  -webkit-user-select: auto;
+  user-select: auto;
+  
+  /* מונע זום אוטומטי באייפון בלחיצה על השדה */
+  font-size: 16px !important; 
+}
+
+button { font-family: 'Heebo', sans-serif; }
 
 /* ── Scrollbar ──────────────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
