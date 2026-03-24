@@ -55,49 +55,33 @@ export default function App() {
   const [selKid, setSelKid] = useState(null);
   const isDesktop = useIsDesktop();
 
-  const t      = THEMES[themeId] || THEMES['C'];
-  const nav    = sc => setScreen(sc);
+  const t   = THEMES[themeId] || THEMES['C'];
+  const nav = sc => setScreen(sc);
 
   const activeKid = role === 'child'
     ? kids.find(k => k.id === childSession?.kidId) || kids[0]
     : kids.find(k => k.id === selKid);
 
-  // Kids get their chosen theme (SUNNY/COSMIC/FOREST), defaulting to SUNNY
-  const kidThemeId = activeKid?.themeId || 'SUNNY';
-  const childT = THEMES[kidThemeId] || THEMES['SUNNY'];
+  const kidThemeId = activeKid?.themeId || 'GALAXY';
+  const childT = THEMES[kidThemeId] || THEMES['GALAXY'];
   const effT   = role === 'child' ? childT : t;
 
   const userName = role === 'child'
     ? (activeKid?.name || 'ילד/ה')
     : (family?.name || 'הורה');
 
-/* ── PWA Dynamic Theme Color ────────────────────── */
+  /* ── PWA Dynamic Theme Color ──────────── */
   useEffect(() => {
     if (!effT) return;
-    
-    // שולף את קוד ה-HEX הראשון מתוך מחרוזת הגרדיאנט (זה הצבע העליון)
     const match = effT.bgGrad.match(/#[0-9a-fA-F]{3,8}/);
-    // אם מצא צבע עליון - ישתמש בו, אחרת יחזור ל-primary
-    const topColor = match ? match[0] : (effT.primary || '#ffffff'); 
+    const topColor = match ? match[0] : (effT.primary || '#ffffff');
+    let meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) { meta = document.createElement('meta'); meta.name = 'theme-color'; document.head.appendChild(meta); }
+    meta.setAttribute('content', topColor);
+    document.body.style.backgroundColor = topColor;
+  }, [effT]);
 
-    let metaThemeColor = document.querySelector('meta[name="theme-color"]');
-    if (!metaThemeColor) {
-      metaThemeColor = document.createElement('meta');
-      metaThemeColor.name = 'theme-color';
-      document.head.appendChild(metaThemeColor);
-    }
-    metaThemeColor.setAttribute('content', topColor);
-
-    // מעדכן גם את צבע הרקע של ה-body כדי שספארי יבין שזה הרקע
-    document.body.style.backgroundColor = topColor; 
-  }, [effT]); 
-  /* ───────────────────────────────────────────────── */
-
-  /* ── Show loader ONLY on first load (no data yet).
-     If loading but we already have profile/childSession,
-     that's a background refresh — don't interrupt the user. ── */
   const showLoader = loading && !profile && !childSession;
-
   if (showLoader) return <Loader />;
 
   if (!isLoggedIn) return (
@@ -110,7 +94,7 @@ export default function App() {
     </div>
   );
 
-  /* ── Nav config ─────────────────────────────────── */
+  /* ── Nav config ─────────────────────── */
   const pendingCount   = kids.flatMap(k => k.tasks).filter(t => t.status === 'pending').length;
   const activeNav      = role === 'parent' ? PARENT_NAV : CHILD_NAV;
   const navWithBadge   = activeNav.map(item =>
@@ -118,7 +102,7 @@ export default function App() {
   );
   const activeScreenId = role === 'child' && screen === 'dashboard' ? 'childHome' : screen;
 
-  /* ── Screen content ─────────────────────────────── */
+  /* ── Screen content ─────────────────── */
   const getContent = () => {
     if (role === 'parent') {
       switch (screen) {
@@ -143,11 +127,22 @@ export default function App() {
     }
   };
 
-  /* ════════════════════════════════════════
-     DESKTOP — Sidebar + full content
-  ════════════════════════════════════════ */
+  /* ════════════════════════════════════════════════════
+     DESKTOP — Sidebar + COMPACT centered content column
+     Content is max 520px wide, centered, card-like.
+     Gradient background visible on both sides of content.
+  ════════════════════════════════════════════════════ */
   if (isDesktop) return (
-    <div style={{ display: 'flex', height: '100vh', direction: 'rtl', overflow: 'hidden', background: effT.bgGrad, fontFamily: "'Heebo',sans-serif" }}>
+    <div style={{
+      display: 'flex',
+      height: '100vh',
+      direction: 'rtl',
+      overflow: 'hidden',
+      background: effT.bgGrad,
+      fontFamily: "'Heebo',sans-serif",
+    }}>
+
+      {/* Sidebar — fixed on right */}
       <Sidebar
         t={effT}
         items={navWithBadge}
@@ -158,16 +153,48 @@ export default function App() {
         userName={userName}
         onLogout={actions.signOut}
       />
-      <main style={{ flex: 1, height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', background: effT.bgGrad, minWidth: 0 }}>
-        {error && <ErrorBanner msg={error} />}
-        {getContent()}
-      </main>
+
+      {/* Main area — gradient bg, centered content column */}
+      <div style={{
+        flex: 1,
+        height: '100vh',
+        overflowY: 'auto',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        padding: '24px 20px',
+        /* background inherits effT.bgGrad from parent */
+      }}>
+        {/* ── Compact content card ── */}
+        <div style={{
+          width: '100%',
+          maxWidth: 480,           /* phone-like column */
+          background: '#FFFFFF',
+          borderRadius: 24,
+          overflow: 'hidden',
+          boxShadow: '0 8px 40px rgba(0,0,0,.18), 0 2px 8px rgba(0,0,0,.08)',
+          minHeight: 'calc(100vh - 48px)',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+        }}>
+          {error && <ErrorBanner msg={error} />}
+
+          {/* Screen content fills the column */}
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            {getContent()}
+          </div>
+
+          {/* Bottom nav inside the card on desktop too */}
+          <BottomNav t={effT} items={navWithBadge} active={activeScreenId} onNav={nav} />
+        </div>
+      </div>
     </div>
   );
 
-  /* ════════════════════════════════════════
+  /* ════════════════════════════════════════════════════
      MOBILE — Full screen + bottom nav
-  ════════════════════════════════════════ */
+  ════════════════════════════════════════════════════ */
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: '#fff', overflow: 'hidden', fontFamily: "'Heebo',sans-serif" }}>
       {error && <ErrorBanner msg={error} />}

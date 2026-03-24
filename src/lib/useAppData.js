@@ -110,19 +110,14 @@ export function useAppData() {
     const { data: { subscription } } = db.onAuthChange((event, sess) => {
       setSession(sess);
       if (sess) {
-        // Only call loadParent if this is a genuine sign-in event,
-        // not just a TOKEN_REFRESHED that happens on tab-focus.
-        // For TOKEN_REFRESHED, we already have profile loaded — no need to re-fetch.
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-          // INITIAL_SESSION is handled by getSession() above if no session.
-          // If there IS a session on INITIAL_SESSION, getSession() also fires → don't double-load.
-          // So only call loadParent for SIGNED_IN (actual fresh login).
-          if (event === 'SIGNED_IN') {
-            loadParent(sess);
-          }
+        // INITIAL_SESSION: page reload while already logged in — load data
+        // SIGNED_IN: handled directly by the signIn action above
+        // TOKEN_REFRESHED: silent session renewal — no reload needed
+        if (event === 'INITIAL_SESSION') {
+          loadParent(sess);
         }
-        // TOKEN_REFRESHED: session renewed, no reload needed
       } else {
+        // Signed out
         setProfile(null);
         setFamily(null);
         setKids([]);
@@ -145,7 +140,14 @@ export function useAppData() {
      ACTIONS
   ════════════════════════════════════════════════════ */
   const actions = {
-    signIn:  (e, p) => db.authSignIn(e, p),
+    signIn: async (e, p) => {
+      const result = await db.authSignIn(e, p);
+      if (!result.error && result.data?.session) {
+        setSession(result.data.session);
+        loadParent(result.data.session);
+      }
+      return result;
+    },
     signUp:  (e, p) => db.authSignUp(e, p),
 
     signOut: async () => {

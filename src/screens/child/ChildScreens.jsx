@@ -1,319 +1,323 @@
 // ═══════════════════════════════════════════════════════
-//  Child Screens — Game UI v5
-//  Works with SUNNY / COSMIC / FOREST themes.
-//  Uses theme.primary, .secondary, .accent, .coinBg etc.
+//  ChildScreens v2 — Galaxy Kids
+//  Fixes:
+//  · No empty orange space at bottom
+//  · Badge icons: softer opacity (not full grayscale)
+//  · Shop emoji: colored, not gray
+//  · Cleaner spacing throughout
+//  · Progress bar visible even at 0%
 // ═══════════════════════════════════════════════════════
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { SHOP_ITEMS, ALL_BADGES } from '../../data.js';
 
 const EF = "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
 
 /* ── Helpers ─────────────────────────────── */
-const isDark = (t) => t.id === 'COSMIC';
 
-const textOn  = (t) => isDark(t) ? '#fff' : '#1A1A2E';
-const textSub = (t) => isDark(t) ? 'rgba(255,255,255,.70)' : t.textLight || '#888';
+const CoinRain = ({ active }) => {
+  if (!active) return null;
+  return (
+    <div className="coin-rain-container">
+      {Array.from({ length: 16 }, (_, i) => (
+        <span key={i} className="coin-rain-item" style={{
+          left: `${5 + i * 5.8}%`, top: '-20px',
+          fontSize: `${14 + (i % 3) * 5}px`,
+          animationDelay: `${i * 0.06}s`,
+          animationDuration: `${0.85 + (i % 4) * 0.18}s`,
+          '--drift': `${(i % 2 === 0 ? 1 : -1) * (10 + i * 4)}px`,
+        }}>🪙</span>
+      ))}
+    </div>
+  );
+};
 
-/* ── Coin Rain ────────────────────────────── */
-const CoinRain = ({ active }) => !active ? null : (
-  <div className="coin-rain-container">
-    {Array.from({ length: 16 }, (_, i) => (
-      <span key={i} className="coin-rain-item" style={{ left: `${5 + i * 5.8}%`, top: '-24px', fontSize: `${15 + (i % 3) * 5}px`, animationDelay: `${i * .06}s`, animationDuration: `${.9 + (i % 4) * .2}s`, '--drift': `${(i % 2 === 0 ? 1 : -1) * (20 + i * 4)}px` }}>🪙</span>
-    ))}
-  </div>
-);
-
-/* ── Confetti ─────────────────────────────── */
 const Confetti = () => (
   <div className="confetti-overlay">
-    {Array.from({ length: 26 }, (_, i) => (
-      <span key={i} style={{ position: 'absolute', left: `${3 + i * 3.7}%`, top: `${12 + (i % 4) * 8}%`, fontSize: `${12 + (i % 3) * 6}px`, animation: `confetti ${.7 + (i % 4) * .2}s ease-out ${i * .045}s both`, fontFamily: EF }}>
-        {['⭐','🎊','✨','🌟','💫','🎉','🏆','💎','🪙','🎈'][ i % 10]}
+    {Array.from({ length: 22 }, (_, i) => (
+      <span key={i} style={{
+        position: 'absolute',
+        left: `${3 + i * 4.3}%`, top: `${12 + (i % 5) * 8}%`,
+        fontSize: `${12 + (i % 4) * 5}px`,
+        animation: `confetti ${0.65 + (i % 3) * 0.25}s ease-out ${i * 0.05}s both`,
+        fontFamily: EF,
+      }}>
+        {['⭐','🎉','✨','🌟','💫','🎊','🏆','💎','🪙','🎈'][i % 10]}
       </span>
     ))}
   </div>
 );
 
-/* ── Star Burst ───────────────────────────── */
-const StarBurst = ({ show }) => !show ? null : (
-  <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9997, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-    <span style={{ fontSize: '90px', fontFamily: EF, animation: 'starBurst .65s ease-out' }}>⭐</span>
-  </div>
-);
-
-/* ── Coin Bubble ──────────────────────────── */
-const CoinBubble = ({ amount, t, size = 'md', glow = false }) => {
-  const big = size === 'lg';
+// Shimmer progress bar — always shows something even at 0%
+const GameBar = ({ pct, gradient, height = 20, bg = '#EDE7F6' }) => {
+  const w = Math.max(0, Math.min(100, pct));
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: big ? '10px' : '6px' }}>
-      <div className={`game-coin ${big ? 'game-coin-lg' : ''} ${glow ? 'anim-pulse' : ''}`}
-        style={{ background: t.coinBg }}>
-        <span style={{ fontFamily: EF }}>🪙</span>
+    <div style={{ height, borderRadius: 50, overflow: 'hidden', background: bg, boxShadow: 'inset 0 2px 5px rgba(0,0,0,.10)', position: 'relative' }}>
+      {/* Track always shows gradient at 8% min so bar is visible */}
+      <div style={{
+        height: '100%', borderRadius: 50,
+        width: `${Math.max(w > 0 ? w : 0, w === 0 ? 0 : 5)}%`,
+        background: gradient,
+        boxShadow: w > 2 ? `0 2px 10px rgba(124,77,255,.3)` : 'none',
+        transition: 'width .9s cubic-bezier(.22,.68,0,1.2)',
+        position: 'relative', overflow: 'hidden', minWidth: w > 0 ? 8 : 0,
+      }}>
+        {w > 12 && (
+          <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, fontWeight: 900, color: 'rgba(255,255,255,.9)' }}>{Math.round(w)}%</span>
+        )}
+        <div style={{ position: 'absolute', top: 0, left: '-100%', width: '100%', height: '100%', background: 'linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent)', animation: 'shimmer 2s ease-in-out infinite', backgroundSize: '200% 100%' }}/>
       </div>
-      <span style={{ fontWeight: 900, fontSize: big ? '30px' : '18px', color: t.primary, letterSpacing: '-.5px' }}>
-        ₪{amount}
-      </span>
     </div>
   );
 };
 
-/* ── Progress Bar (game style) ────────────── */
-const GameBar = ({ value, t, height = 22, label }) => {
-  const pct = Math.max(0, Math.min(100, value || 0));
+const StarRow = ({ filled, total = 5, size = 17 }) => (
+  <div style={{ display: 'flex', gap: 3 }}>
+    {Array.from({ length: total }, (_, i) => (
+      <span key={i} style={{
+        fontSize: size, fontFamily: EF, lineHeight: 1,
+        filter: i < filled ? 'drop-shadow(0 1px 3px rgba(255,200,0,.55))' : 'grayscale(1) opacity(.3)',
+        animation: i < filled ? `pulse 2.2s ${i * .15}s ease-in-out infinite` : 'none',
+      }}>⭐</span>
+    ))}
+  </div>
+);
+
+// Task status config
+const ST = {
+  todo:     { color: '#7C4DFF', bg: '#F3EEFF', icon: '📌', label: 'לביצוע',           btnBg: 'linear-gradient(135deg,#00BCD4,#00ACC1)', btnShadow: '0 5px 16px rgba(0,188,212,.45)' },
+  pending:  { color: '#FF9800', bg: '#FFF8F0', icon: '⏳', label: 'ממתין לאישור הורה', btnBg: null },
+  done:     { color: '#00C853', bg: '#E8F5E9', icon: '✅', label: '!הושלם',            btnBg: null },
+  rejected: { color: '#FF3D57', bg: '#FFEBEE', icon: '❌', label: 'נדחה — נסה שוב',   btnBg: null },
+};
+
+/* ── Task Card ───────────────────────────── */
+function TaskCard({ task, onComplete, isCompleting, justDone }) {
+  const st = ST[task.status] || ST.todo;
   return (
-    <div>
-      <div className="game-progress-bg" style={{ height, background: t.progressBg }}>
-        <div className="game-progress-fill" style={{ width: `${pct}%`, background: t.progressGrad }}>
-          {pct > 15 && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', fontWeight: 900, color: 'rgba(255,255,255,.95)' }}>{pct}%</span>}
+    <div
+      className={`game-task-card ${task.status === 'done' ? 'done' : ''} ${justDone ? 'anim-wiggle' : 'anim-in'}`}
+      style={{ marginBottom: 8 }}
+    >
+      {/* Status stripe — right edge */}
+      <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 5, background: st.color, borderRadius: '0 20px 20px 0' }}/>
+
+      <div style={{ padding: '11px 15px 11px 11px', display: 'flex', alignItems: 'center', gap: 11 }}>
+
+        {/* Icon */}
+        <div style={{ width: 44, height: 44, borderRadius: 14, background: st.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontFamily: EF, flexShrink: 0, boxShadow: `0 2px 8px ${st.color}22` }}>
+          {st.icon}
+        </div>
+
+        {/* Text */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 800, fontSize: 14, color: '#1A0033', lineHeight: 1.2 }}>{task.title}</span>
+            {task.isDaily && <span className="daily-badge">🌅 יומי</span>}
+          </div>
+          {task.desc && <div style={{ fontSize: 11, color: '#7B5EA7', marginTop: 2, lineHeight: 1.3 }}>{task.desc}</div>}
+          <div style={{ fontSize: 11, fontWeight: 700, color: st.color, marginTop: 3 }}>{st.label}</div>
+        </div>
+
+        {/* Reward + CTA */}
+        <div style={{ textAlign: 'center', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 6, justifyContent: 'flex-end' }}>
+            <span style={{ fontFamily: EF, fontSize: 13 }}>🪙</span>
+            <span style={{ fontWeight: 900, fontSize: 14, color: '#7C4DFF' }}>₪{task.reward}</span>
+          </div>
+          {task.status === 'todo' && (
+            <button
+              onClick={onComplete}
+              disabled={isCompleting}
+              style={{
+                padding: '7px 14px', border: 'none', borderRadius: 50,
+                background: isCompleting ? '#ccc' : st.btnBg,
+                color: '#fff', fontFamily: "'Heebo',sans-serif",
+                fontSize: 11, fontWeight: 800, cursor: isCompleting ? 'wait' : 'pointer',
+                boxShadow: isCompleting ? 'none' : st.btnShadow,
+                whiteSpace: 'nowrap',
+                transition: 'transform .12s, opacity .12s',
+              }}
+            >{isCompleting ? '⏳' : '✓ סיימתי'}</button>
+          )}
         </div>
       </div>
-      {label && <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '10px', fontWeight: 700, color: textSub(t) }}>
-        <span>{pct}% הושג</span>
-        <span>{label}</span>
-      </div>}
     </div>
   );
-};
+}
 
-/* ── Stars Row ────────────────────────────── */
-const Stars = ({ filled, total = 5 }) => (
-  <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-    {Array.from({ length: total }, (_, i) => (
-      <span key={i} style={{ fontSize: '16px', fontFamily: EF, opacity: i < filled ? 1 : .25, filter: i < filled ? 'none' : 'grayscale(1)', transition: 'all .3s', transitionDelay: `${i * .05}s` }}>⭐</span>
-    ))}
-  </div>
-);
-
-/* ── Floating Decorations ─────────────────── */
-const FloatDeco = ({ t }) => (
-  <>
-    <span className="anim-float"  style={{ position: 'absolute', top: 10, left: 14, fontSize: '22px', opacity: .4, fontFamily: EF, pointerEvents: 'none' }}>⭐</span>
-    <span className="anim-float2" style={{ position: 'absolute', top: 32, left: 46, fontSize: '14px', opacity: .3, fontFamily: EF, pointerEvents: 'none' }}>✨</span>
-    <span className="anim-float3" style={{ position: 'absolute', bottom: 12, left: 28, fontSize: '17px', opacity: .28, fontFamily: EF, pointerEvents: 'none' }}>💫</span>
-  </>
-);
-
-/* ════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════
    CHILD DASHBOARD
-════════════════════════════════════════════════════════ */
+════════════════════════════════════════════════════ */
 export function ChildDashboard({ t, kid, onCompleteTask, onNav }) {
   const [completingId, setCompletingId] = useState(null);
   const [showCoins,    setShowCoins]    = useState(false);
-  const [showStar,     setShowStar]     = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   const [justDoneId,   setJustDoneId]   = useState(null);
-  if (!kid) return null;
 
-  const pct  = Math.min(100, Math.round((kid.earned / kid.goalAmount) * 100));
-  const done = kid.tasks.filter(x => x.status === 'done').length;
-  const todo = kid.tasks.filter(x => x.status === 'todo').length;
-  const starsEarned = Math.min(5, Math.floor(pct / 20));
-
-  const todoTasks     = kid.tasks.filter(x => x.status === 'todo');
-  const pendingTasks  = kid.tasks.filter(x => x.status === 'pending');
-  const doneTasks     = kid.tasks.filter(x => x.status === 'done');
-  const rejectedTasks = kid.tasks.filter(x => x.status === 'rejected');
-
-  const handleComplete = async (task) => {
+  const handleComplete = useCallback(async (task) => {
     setCompletingId(task.id);
     await onCompleteTask(task.id);
     setCompletingId(null);
     setJustDoneId(task.id);
     if (!task.requiresApproval) {
-      setShowCoins(true); setShowStar(true);
-      setTimeout(() => { setShowCoins(false); setShowStar(false); }, 1700);
+      setShowCoins(true); setShowConfetti(true);
+      setTimeout(() => { setShowCoins(false); setShowConfetti(false); }, 1800);
     }
-    setTimeout(() => setJustDoneId(null), 2000);
-  };
+    setTimeout(() => setJustDoneId(null), 2200);
+  }, [onCompleteTask]);
 
-  const encouragements = [
-    { pct: 0,  text: `!שלום ${kid.name} 👋 בוא נתחיל!` },
-    { pct: 25, text: '!מגניב! ממשיך כמו גיבור 💪' },
-    { pct: 50, text: '!חצי דרך! אתה מדהים 🚀' },
-    { pct: 75, text: '!כמעט שם! עוד קצת 🏆' },
-    { pct: 90, text: '!וואו! כמעט הגעת למטרה 🎉' },
-  ];
-  const msg = encouragements.filter(e => pct >= e.pct).pop()?.text || `!שלום ${kid.name}`;
+  if (!kid) return null;
 
-  // Dark theme text
-  const headerText = '#fff';
-  const sheetBg = t.sheetBg || '#FFFBF0';
+  const pct   = Math.round(Math.min(100, (kid.earned / kid.goalAmount) * 100));
+  const stars = Math.min(5, Math.floor(pct / 20));
+  const todoT = kid.tasks.filter(t => t.status === 'todo');
+  const pendT = kid.tasks.filter(t => t.status === 'pending');
+  const doneT = kid.tasks.filter(t => t.status === 'done');
+  const rejT  = kid.tasks.filter(t => t.status === 'rejected');
+
+  const encourage = pct >= 95 ? '🎉 כמעט הגעת למטרה!'
+    : pct >= 75 ? '🚀 כמעט שם! המשך!'
+    : pct >= 40 ? '💪 כל הכבוד, ממשיך!'
+    : pct >= 10 ? '⭐ התחלה נהדרת!'
+    : `!שלום ${kid.name} 👋 בוא נתחיל`;
+
+  // Derive gradient from t, fallback to violet→teal
+  const barGrad = t.progressGrad || 'linear-gradient(90deg,#7C4DFF,#00BCD4)';
+  const primary = t.primary || '#7C4DFF';
+
+  const Sec = ({ icon, label, count, color }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 14, marginBottom: 8 }}>
+      <span style={{ fontSize: 15, fontFamily: EF }}>{icon}</span>
+      <span style={{ fontWeight: 800, fontSize: 12, color }}>{label}</span>
+      <span style={{ background: color + '22', color, borderRadius: 50, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>{count}</span>
+    </div>
+  );
 
   return (
-    <div style={{ background: t.bgGrad, minHeight: '100%', fontFamily: "'Heebo',sans-serif", position: 'relative' }}>
+    <div style={{ background: t.bgGrad, minHeight: '100%', fontFamily: "'Heebo',sans-serif", display: 'flex', flexDirection: 'column' }}>
       <CoinRain active={showCoins} />
-      <StarBurst show={showStar} />
+      {showConfetti && <Confetti />}
 
-      {/* ════ HEADER ════ */}
-      <div style={{ padding: '20px 18px 16px', position: 'relative', overflow: 'hidden' }}>
-        <FloatDeco t={t} />
+      {/* ── HEADER ─────────────────────────── */}
+      <div style={{ padding: '18px 16px 14px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+        {/* Floating decor */}
+        {[{t:8,l:12,s:17,d:0,o:.38},{t:22,l:58,s:13,d:1.2,o:.28},{t:5,l:104,s:15,d:.7,o:.32}].map((p,i)=>(
+          <span key={i} style={{ position:'absolute', top:p.t, left:p.l, fontSize:p.s, fontFamily:EF, opacity:p.o, pointerEvents:'none', animation:`floatB ${3+p.d}s ease-in-out infinite ${p.d}s` }}>⭐</span>
+        ))}
 
-        {/* Avatar + greeting */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '52px', height: '52px', borderRadius: '16px',
-              background: 'rgba(255,255,255,.22)', border: '2px solid rgba(255,255,255,.35)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '28px', fontFamily: EF,
-            }}>{kid.avatar}</div>
-            <div>
-              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.8)', fontWeight: 600 }}>שלום,</div>
-              <div style={{ fontSize: '20px', fontWeight: 900, color: headerText, letterSpacing: '-.3px', lineHeight: 1.1 }}>{kid.name} !</div>
-            </div>
+        {/* Greeting + coin */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 1, marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.72)', fontWeight: 600, marginBottom: 2 }}>שלום, {kid.name}! 👋</div>
+            <div style={{ fontSize: 21, fontWeight: 900, color: '#fff', letterSpacing: '-.3px', lineHeight: 1.15 }}>המשימות שלי</div>
           </div>
-
-          {/* Coin balance badge */}
-          <div style={{
-            background: 'rgba(255,255,255,.22)', backdropFilter: 'blur(10px)',
-            borderRadius: '18px', padding: '10px 16px',
-            border: '1.5px solid rgba(255,255,255,.4)', textAlign: 'center',
-            boxShadow: '0 4px 16px rgba(0,0,0,.15)',
-          }}>
-            <span style={{ fontSize: '22px', fontFamily: EF, display: 'block', lineHeight: 1 }}>🪙</span>
-            <div style={{ fontWeight: 900, fontSize: '18px', color: headerText, lineHeight: 1.1 }}>₪{kid.earned}</div>
-            <div style={{ fontSize: '9px', color: 'rgba(255,255,255,.78)', fontWeight: 600 }}>מטבעות</div>
+          <div style={{ background: 'rgba(255,255,255,.2)', backdropFilter: 'blur(12px)', borderRadius: 16, padding: '8px 13px', border: '1.5px solid rgba(255,255,255,.3)', textAlign: 'center' }}>
+            <span style={{ fontSize: 22, fontFamily: EF, display: 'block', lineHeight: 1 }}>🪙</span>
+            <div style={{ fontWeight: 900, fontSize: 16, color: '#FFD54F', lineHeight: 1.1 }}>₪{kid.earned}</div>
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,.7)', fontWeight: 600 }}>מטבעות</div>
           </div>
         </div>
 
         {/* Stats row */}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '14px', position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', gap: 6, position: 'relative', zIndex: 1 }}>
           {[
-            { icon: '✅', v: done,       l: 'הושלמו',  color: t.success  || '#00C853' },
-            { icon: '📌', v: todo,       l: 'לביצוע',  color: t.secondary },
-            { icon: '🔥', v: kid.streak, l: 'סטריק',   color: t.warning || '#FF9800' },
+            { icon: '✅', v: doneT.length, l: 'הושלמו',  c: '#00E676' },
+            { icon: '📌', v: todoT.length, l: 'לביצוע',  c: '#93C5FD' },
+            { icon: '🔥', v: kid.streak,   l: 'סטריק',   c: '#FFD54F' },
           ].map((s, i) => (
-            <div key={i} style={{
-              flex: 1, background: 'rgba(255,255,255,.18)', borderRadius: '14px',
-              padding: '9px 4px', textAlign: 'center',
-              border: '1px solid rgba(255,255,255,.28)',
-              backdropFilter: 'blur(6px)',
-            }}>
-              <span style={{ fontSize: '16px', fontFamily: EF, display: 'block', lineHeight: 1 }}>{s.icon}</span>
-              <div style={{ fontWeight: 900, fontSize: '18px', color: headerText, lineHeight: 1.1, marginTop: '1px' }}>{s.v}</div>
-              <div style={{ fontSize: '9px', color: 'rgba(255,255,255,.78)', fontWeight: 600 }}>{s.l}</div>
+            <div key={i} style={{ flex: 1, background: 'rgba(255,255,255,.18)', borderRadius: 12, padding: '7px 4px', textAlign: 'center', border: '1px solid rgba(255,255,255,.22)' }}>
+              <span style={{ fontSize: 14, fontFamily: EF, display: 'block', lineHeight: 1, marginBottom: 2 }}>{s.icon}</span>
+              <div style={{ fontWeight: 900, fontSize: 16, color: s.c, lineHeight: 1 }}>{s.v}</div>
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,.68)', fontWeight: 600, marginTop: 1 }}>{s.l}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ════ GOAL CARD ════ */}
-      <div style={{ padding: '0 14px 14px', position: 'relative', zIndex: 1 }}>
-        <div style={{
-          background: isDark(t) ? 'rgba(255,255,255,.09)' : 'rgba(255,255,255,.93)',
-          borderRadius: '22px', padding: '16px 18px',
-          boxShadow: isDark(t) ? '0 4px 24px rgba(0,0,0,.35)' : '0 6px 24px rgba(0,0,0,.12)',
-          border: isDark(t) ? '1px solid rgba(255,255,255,.14)' : 'none',
-          backdropFilter: isDark(t) ? 'blur(12px)' : 'none',
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+      {/* ── GOAL CARD ──────────────────────── */}
+      <div style={{ padding: '0 14px 12px', flexShrink: 0 }}>
+        <div style={{ background: 'rgba(255,255,255,.97)', borderRadius: 20, padding: '15px', boxShadow: '0 6px 24px rgba(0,0,0,.15)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 11 }}>
             <div>
-              <div style={{ fontSize: '10px', color: textSub(t), fontWeight: 700, marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '.5px' }}>🎯 המטרה שלי</div>
-              <div style={{ fontSize: '18px', fontWeight: 900, color: textOn(t) }}>
+              <div style={{ fontSize: 10, color: '#7B5EA7', fontWeight: 700, marginBottom: 3, letterSpacing: '.3px' }}>🎯 המטרה שלי</div>
+              <div style={{ fontSize: 16, fontWeight: 900, color: '#1A0033' }}>
                 <span style={{ fontFamily: EF }}>{kid.goalIcon}</span> {kid.goalName}
               </div>
             </div>
-            <div style={{ textAlign: 'center', background: t.primary + '18', borderRadius: '12px', padding: '7px 12px', border: `1px solid ${t.primary}30` }}>
-              <div style={{ fontWeight: 900, fontSize: '18px', color: t.primary }}>₪{Math.max(0, kid.goalAmount - kid.earned)}</div>
-              <div style={{ fontSize: '9px', color: textSub(t), fontWeight: 700 }}>נשאר</div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: primary }}>₪{kid.goalAmount - kid.earned}</div>
+              <div style={{ fontSize: 9, color: '#7B5EA7', fontWeight: 600 }}>נשאר</div>
             </div>
           </div>
-
-          <GameBar value={pct} t={t} label={pct >= 100 ? '🎉 הושג!' : pct >= 75 ? '🚀 כמעט!' : '⭐ מתקדם!'} />
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-            <Stars filled={starsEarned} total={5} />
-            <div style={{ fontSize: '12px', fontWeight: 800, color: t.primary }}>₪{kid.earned} / ₪{kid.goalAmount}</div>
+          <GameBar pct={pct} gradient={barGrad} height={20} bg="#EDE7F6" />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 7 }}>
+            <StarRow filled={stars} total={5} size={15} />
+            <div style={{ fontSize: 11, fontWeight: 800, color: pct >= 100 ? '#00C853' : primary }}>{encourage}</div>
           </div>
-
-          {/* Encouragement pill */}
-          <div style={{
-            marginTop: '10px', padding: '8px 14px',
-            background: `${t.primary}18`,
-            borderRadius: '50px', border: `1px solid ${t.primary}28`,
-            fontSize: '12px', fontWeight: 700, color: t.primary, textAlign: 'center',
-          }}>{msg}</div>
         </div>
       </div>
 
-      {/* ════ TASKS SHEET ════ */}
+      {/* ── TASK SHEET ─────────────────────────────────────
+          flex: 1 means it fills ALL remaining space —
+          no empty orange gap below the sheet ever.
+      ─────────────────────────────────────────────────── */}
       <div style={{
-        background: sheetBg, borderTopLeftRadius: '28px', borderTopRightRadius: '28px',
-        padding: '6px 14px 24px', minHeight: '260px', position: 'relative', zIndex: 1,
+        background: t.sheetBg || '#F0EEFF',
+        borderTopLeftRadius: 28, borderTopRightRadius: 28,
+        padding: '0 14px 24px',
+        flex: 1,          /* fills remaining height */
+        overflow: 'auto',
       }}>
-        {/* Handle */}
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 10px' }}>
-          <div style={{ width: '38px', height: '4px', background: 'rgba(0,0,0,.12)', borderRadius: '2px' }} />
+        {/* Drag handle */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 6px' }}>
+          <div style={{ width: 32, height: 4, borderRadius: 2, background: 'rgba(0,0,0,.12)' }}/>
         </div>
 
-        {/* TODO */}
-        {todoTasks.length > 0 && (
-          <TaskSection icon="📌" label="לביצוע" count={todoTasks.length} color={t.secondary} t={t}>
-            {todoTasks.map((task, i) => (
-              <TaskRow key={task.id} task={task} t={t}
-                isCompleting={completingId === task.id}
-                justDone={justDoneId === task.id}
-                onComplete={() => handleComplete(task)}
-                delay={i * .06}
-              />
-            ))}
-          </TaskSection>
-        )}
-
-        {/* PENDING */}
-        {pendingTasks.length > 0 && (
-          <TaskSection icon="⏳" label="ממתין לאישור" count={pendingTasks.length} color={t.warning || '#FF9800'} t={t}>
-            {pendingTasks.map(task => <TaskRow key={task.id} task={task} t={t} pending />)}
-          </TaskSection>
-        )}
-
-        {/* DONE */}
-        {doneTasks.length > 0 && (
-          <TaskSection icon="✅" label="הושלמו" count={doneTasks.length} color={t.success || '#00C853'} t={t}>
-            {doneTasks.map(task => <TaskRow key={task.id} task={task} t={t} done />)}
-          </TaskSection>
-        )}
-
-        {/* REJECTED */}
-        {rejectedTasks.length > 0 && (
-          <TaskSection icon="❌" label="נדחו" count={rejectedTasks.length} color={t.danger} t={t}>
-            {rejectedTasks.map(task => <TaskRow key={task.id} task={task} t={t} rejected />)}
-          </TaskSection>
-        )}
-
+        {/* Empty state */}
         {kid.tasks.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-            <span style={{ fontSize: '56px', fontFamily: EF, display: 'block', marginBottom: '10px', animation: 'floatB 3s ease-in-out infinite' }}>🎮</span>
-            <div style={{ fontWeight: 800, fontSize: '16px', color: t.primary, marginBottom: '5px' }}>אין משימות עדיין</div>
-            <div style={{ fontSize: '12px', color: textSub(t) }}>ההורים יוסיפו משימות בקרוב!</div>
+          <div style={{ textAlign: 'center', padding: '36px 20px' }}>
+            <span style={{ fontSize: 52, fontFamily: EF, display: 'block', marginBottom: 10 }}>🎮</span>
+            <div style={{ fontWeight: 800, fontSize: 16, color: primary, marginBottom: 5 }}>אין משימות עדיין</div>
+            <div style={{ fontSize: 12, color: '#7B5EA7' }}>ההורים יוסיפו משימות בקרוב!</div>
           </div>
         )}
 
-        {/* Quick badge peek */}
-        {doneTasks.length >= 1 && (
-          <div style={{ marginTop: '18px', background: isDark(t) ? 'rgba(255,255,255,.07)' : '#fff', borderRadius: '16px', padding: '13px', boxShadow: '0 2px 12px rgba(0,0,0,.06)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <div style={{ fontSize: '12px', fontWeight: 800, color: t.primary }}>🏅 התגים שלי</div>
-              <button onClick={() => onNav('badges')} style={{ background: 'none', border: 'none', fontSize: '11px', color: t.primary, fontWeight: 700, cursor: 'pointer', fontFamily: "'Heebo',sans-serif" }}>הצג הכל →</button>
+        {todoT.length > 0 && <><Sec icon="📌" label="לביצוע" count={todoT.length} color="#7C4DFF" />{todoT.map(task => <TaskCard key={task.id} task={task} isCompleting={completingId === task.id} justDone={justDoneId === task.id} onComplete={() => handleComplete(task)} />)}</>}
+        {pendT.length > 0 && <><Sec icon="⏳" label="ממתין לאישור" count={pendT.length} color="#FF9800" />{pendT.map(task => <TaskCard key={task.id} task={task} />)}</>}
+        {doneT.length > 0 && <><Sec icon="✅" label="הושלמו" count={doneT.length} color="#00C853" />{doneT.map(task => <TaskCard key={task.id} task={task} />)}</>}
+        {rejT.length > 0  && <><Sec icon="❌" label="נדחו" count={rejT.length} color="#FF3D57" />{rejT.map(task => <TaskCard key={task.id} task={task} />)}</>}
+
+        {/* Badge quick-strip */}
+        {doneT.length > 0 && (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: primary, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ fontFamily: EF }}>🏅</span> התגים שלי
+              </div>
+              <button onClick={() => onNav('badges')} style={{ background: 'none', border: 'none', color: primary, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: "'Heebo',sans-serif" }}>
+                הצג הכל →
+              </button>
             </div>
-            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }} className="scroll-hide">
+            <div style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 4 }} className="scroll-hide">
               {[
-                { icon: '⚡', name: 'ראשון!',  earned: doneTasks.length >= 1 },
-                { icon: '🧹', name: 'ניקיון',  earned: doneTasks.length >= 3 },
-                { icon: '📚', name: 'לימוד',   earned: doneTasks.length >= 5 },
-                { icon: '🔥', name: '7 ימים',  earned: kid.streak >= 7 },
-                { icon: '💎', name: 'כוכב',    earned: pct >= 100 },
+                { icon: '⚡', name: 'ראשון',  earned: doneT.length >= 1  },
+                { icon: '🧹', name: 'ניקיון', earned: doneT.length >= 3  },
+                { icon: '📚', name: 'לימוד',  earned: doneT.length >= 5  },
+                { icon: '🔥', name: '7 ימים', earned: kid.streak >= 7    },
+                { icon: '💎', name: 'כוכב',   earned: pct >= 100         },
               ].map((b, i) => (
                 <div key={i} style={{
-                  textAlign: 'center', minWidth: '58px', flexShrink: 0,
-                  background: b.earned ? `linear-gradient(145deg, #FFF9C4, #FFFDE7)` : (isDark(t) ? 'rgba(255,255,255,.06)' : '#F8F8F8'),
-                  borderRadius: '14px', padding: '8px 6px',
-                  border: b.earned ? `2px solid rgba(255,193,7,.55)` : '2px solid transparent',
-                  opacity: b.earned ? 1 : .55, transition: 'all .3s',
-                  animation: b.earned ? `badgePop .4s ease-out ${i * .1}s both` : 'none',
+                  textAlign: 'center', minWidth: 54, flexShrink: 0,
+                  background: b.earned ? 'linear-gradient(145deg,#EDE7F6,#F3E5F5)' : '#fff',
+                  borderRadius: 12, padding: '8px 5px',
+                  border: b.earned ? `2px solid ${primary}44` : '2px solid #eee',
+                  boxShadow: b.earned ? `0 3px 10px ${primary}18` : 'none',
+                  opacity: b.earned ? 1 : .65,
                 }}>
-                  <span style={{ fontSize: '22px', fontFamily: EF, filter: b.earned ? 'none' : 'grayscale(1)' }}>{b.icon}</span>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: b.earned ? t.primary : textSub(t), marginTop: '3px' }}>{b.name}</div>
-                  {b.earned && <div style={{ fontSize: '8px', color: t.success || '#00C853', fontWeight: 700 }}>✓</div>}
+                  {/* colored even when unearthed — just dimmed with opacity, not grayscale */}
+                  <div style={{ fontSize: 20, fontFamily: EF, lineHeight: 1 }}>{b.icon}</div>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: b.earned ? primary : '#999', marginTop: 3 }}>{b.name}</div>
+                  {b.earned && <div style={{ fontSize: 8, color: '#00C853', fontWeight: 700 }}>✓</div>}
                 </div>
               ))}
             </div>
@@ -324,175 +328,86 @@ export function ChildDashboard({ t, kid, onCompleteTask, onNav }) {
   );
 }
 
-/* ── Task Section Header ──────────────────── */
-const TaskSection = ({ icon, label, count, color, t, children }) => (
-  <div style={{ marginBottom: '14px' }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-      <span style={{ fontFamily: EF, fontSize: '14px' }}>{icon}</span>
-      <span style={{ fontWeight: 800, fontSize: '12px', color }}>{label}</span>
-      <div style={{ background: color + '22', borderRadius: '50px', padding: '1px 8px', fontSize: '10px', fontWeight: 700, color }}>{count}</div>
-    </div>
-    {children}
-  </div>
-);
-
-/* ── Task Row ────────────────────────────── */
-const TaskRow = ({ task, t, onComplete, isCompleting, justDone, pending, done, rejected, delay = 0 }) => {
-  const status = done ? 'done' : pending ? 'pending' : rejected ? 'rejected' : 'todo';
-  const stripe = { done: t.success||'#00C853', pending: t.warning||'#FF9800', rejected: t.danger||'#FF3D57', todo: t.secondary }[status];
-  const statusText = { done: '✅ הושלם!', pending: '⏳ ממתין לאישור הורה', rejected: '❌ נדחה — נסה שוב', todo: '' }[status];
-  const statusIcon = { done: '✅', pending: '⏳', rejected: '❌', todo: '📌' }[status];
-
-  return (
-    <div className={`game-task-card anim-in ${done ? 'done' : ''} ${justDone ? 'anim-wiggle' : ''}`}
-      style={{ marginBottom: '8px', animationDelay: `${delay}s`, opacity: (done || rejected) ? .8 : 1 }}>
-
-      {/* Left stripe */}
-      <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: '5px', background: stripe, borderRadius: '0 20px 20px 0' }} />
-
-      <div style={{ padding: '12px 18px 12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-        {/* Icon */}
-        <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: stripe + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontFamily: EF, flexShrink: 0 }}>
-          {statusIcon}
-        </div>
-
-        {/* Text */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap', marginBottom: '2px' }}>
-            <span style={{ fontWeight: 800, fontSize: '14px', color: '#1A1A2E' }}>{task.title}</span>
-            {task.isDaily && <span className="daily-badge">🌅 יומי</span>}
-          </div>
-          {task.desc && <div style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>{task.desc}</div>}
-          {statusText && <div style={{ fontSize: '11px', fontWeight: 700, color: stripe }}>{statusText}</div>}
-        </div>
-
-        {/* Reward + action */}
-        <div style={{ flexShrink: 0, textAlign: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 900, fontSize: '14px', color: '#FF6B00', marginBottom: '5px', justifyContent: 'flex-end' }}>
-            <span style={{ fontFamily: EF, fontSize: '14px' }}>🪙</span>
-            <span>₪{task.reward}</span>
-          </div>
-          {status === 'todo' && (
-            <button
-              onClick={onComplete}
-              disabled={isCompleting}
-              className="game-btn-complete"
-              style={{
-                background: isCompleting ? '#ccc' : t.successGrad,
-                boxShadow: isCompleting ? 'none' : t.successShadow,
-              }}
-            >
-              {isCompleting ? '⏳' : '✓ סיימתי!'}
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════
    BADGES SCREEN
-════════════════════════════════════════════════════════ */
+════════════════════════════════════════════════════ */
 export function BadgesScreen({ t, kid }) {
   if (!kid) return null;
-  const done  = kid.tasks.filter(x => x.status === 'done').length;
-  const pct   = Math.min(100, Math.round((kid.earned / kid.goalAmount) * 100));
-  const badges = ALL_BADGES(done, pct, kid.streak, kid.earned);
-  const earnedCount = badges.filter(b => b.earned).length;
-  const sheetBg = t.sheetBg || '#FFFBF0';
 
-  // Badge colors per index
-  const badgeColors = ['#FF5722','#7C4DFF','#00BCD4','#00C853','#FF9800','#E91E63','#2196F3','#4CAF50','#FF5722','#9C27B0','#03A9F4','#FFC107'];
+  const done   = kid.tasks.filter(x => x.status === 'done').length;
+  const pct    = Math.round(Math.min(100, (kid.earned / kid.goalAmount) * 100));
+  const badges = ALL_BADGES(done, pct, kid.streak, kid.earned);
+  const earned = badges.filter(b => b.earned).length;
+  const primary = t.primary || '#7C4DFF';
+  const barGrad = t.progressGrad || 'linear-gradient(90deg,#7C4DFF,#00BCD4)';
 
   return (
-    <div style={{ background: t.bgGrad, minHeight: '100%', fontFamily: "'Heebo',sans-serif" }}>
+    <div style={{ background: t.bgGrad, minHeight: '100%', fontFamily: "'Heebo',sans-serif", display: 'flex', flexDirection: 'column' }}>
 
       {/* Header */}
-      <div style={{ padding: '20px 18px 16px', position: 'relative', overflow: 'hidden' }}>
-        <FloatDeco t={t} />
+      <div style={{ padding: '18px 16px 14px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+        <span style={{ position:'absolute', top:6,  left:14, fontSize:15, fontFamily:EF, opacity:.35, animation:'floatB 3.5s ease-in-out infinite' }}>🏅</span>
+        <span style={{ position:'absolute', top:22, left:60, fontSize:12, fontFamily:EF, opacity:.28, animation:'floatB 4.2s ease-in-out infinite .8s' }}>⭐</span>
         <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
-          <span className="anim-float" style={{ fontSize: '52px', fontFamily: EF, display: 'block', marginBottom: '6px' }}>🏆</span>
-          <h2 style={{ fontWeight: 900, fontSize: '22px', color: '#fff', margin: 0, letterSpacing: '-.3px' }}>התגים שלי</h2>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.82)', margin: '4px 0 12px' }}>
-            {earnedCount} מתוך {badges.length} הושגו
-          </p>
-          {/* Star row */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '5px' }}>
-            {badges.map((_, i) => (
-              <span key={i} style={{ fontSize: '14px', fontFamily: EF, opacity: i < earnedCount ? 1 : .2, transition: `opacity .3s ${i * .04}s` }}>⭐</span>
+          <span style={{ fontSize: 48, fontFamily: EF, display: 'block', lineHeight: 1, marginBottom: 5, animation: 'float 3s ease-in-out infinite', filter: 'drop-shadow(0 4px 10px rgba(255,200,0,.45))' }}>🏆</span>
+          <div style={{ fontSize: 21, fontWeight: 900, color: '#fff' }}>התגים שלי</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.75)', marginTop: 3 }}>{earned} מתוך {badges.length} הושגו</div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginTop: 8 }}>
+            {Array.from({ length: badges.length }, (_, i) => (
+              <span key={i} style={{ fontSize: 11, fontFamily: EF, opacity: i < earned ? 1 : .25 }}>⭐</span>
             ))}
           </div>
         </div>
       </div>
 
       {/* Progress */}
-      <div style={{ padding: '0 14px 14px', position: 'relative', zIndex: 1 }}>
-        <div style={{
-          background: isDark(t) ? 'rgba(255,255,255,.10)' : 'rgba(255,255,255,.94)',
-          borderRadius: '18px', padding: '14px 16px',
-          boxShadow: t.cardShadow, backdropFilter: isDark(t) ? 'blur(10px)' : 'none',
-          border: isDark(t) ? '1px solid rgba(255,255,255,.14)' : 'none',
-        }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: textSub(t), marginBottom: '7px' }}>התקדמות כללית</div>
-          <GameBar value={Math.round(earnedCount / badges.length * 100)} t={t} height={18} />
-          <div style={{ fontSize: '12px', fontWeight: 800, color: t.primary, textAlign: 'center', marginTop: '5px' }}>
-            {earnedCount}/{badges.length} תגים הושגו
-          </div>
+      <div style={{ padding: '0 14px 12px', flexShrink: 0 }}>
+        <div style={{ background: 'rgba(255,255,255,.97)', borderRadius: 18, padding: '13px 15px', boxShadow: '0 6px 22px rgba(0,0,0,.14)' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: primary, marginBottom: 7 }}>התקדמות כללית</div>
+          <GameBar pct={Math.round(earned / badges.length * 100)} gradient={barGrad} height={18} bg="#EDE7F6" />
+          <div style={{ textAlign: 'center', fontSize: 11, color: primary, fontWeight: 700, marginTop: 5 }}>{earned}/{badges.length} תגים</div>
         </div>
       </div>
 
-      {/* Badge grid */}
-      <div style={{ background: sheetBg, borderTopLeftRadius: '28px', borderTopRightRadius: '28px', padding: '14px 14px 24px', zIndex: 1, position: 'relative' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '0 0 12px' }}>
-          <div style={{ width: '38px', height: '4px', background: 'rgba(0,0,0,.12)', borderRadius: '2px' }} />
+      {/* Badge grid — flex:1 eliminates empty space */}
+      <div style={{ background: t.sheetBg || '#F0EEFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: '14px 14px 24px', flex: 1, overflow: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 12px' }}>
+          <div style={{ width: 32, height: 4, borderRadius: 2, background: 'rgba(0,0,0,.12)' }}/>
         </div>
 
         <div className="badge-grid">
           {badges.map((b, i) => (
-            <div key={i} className={`badge-card ${b.earned ? 'earned' : ''} anim-in`}
-              style={{ animationDelay: `${i * 0.04}s` }}>
-              {/* Color top stripe */}
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: b.earned ? badgeColors[i % 12] : '#ddd', borderRadius: '18px 18px 0 0', transition: 'background .3s' }} />
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: b.earned ? badgeColors[i % 12] : '#eee', borderRadius: '18px 18px 0 0' }} />
-
-              <div style={{ marginTop: '8px', fontSize: '30px', fontFamily: EF, lineHeight: 1, marginBottom: '6px', filter: b.earned ? 'none' : 'grayscale(1)', transition: 'filter .3s', animation: b.earned ? `badgePop .4s ease-out ${i * .08}s both` : 'none' }}>
-                {b.icon}
-              </div>
-              <div style={{ fontSize: '10px', fontWeight: 800, color: b.earned ? textOn(t) : '#aaa', lineHeight: 1.2, marginBottom: '4px' }}>{b.name}</div>
-              {b.earned
-                ? <div style={{ fontSize: '9px', color: t.success || '#00C853', fontWeight: 800 }}>✓ הושג!</div>
-                : <div style={{ fontSize: '9px', color: '#bbb', fontWeight: 600 }}>טרם הושג</div>
-              }
+            <div key={i} className="badge-card" style={{
+              background: b.earned ? 'linear-gradient(145deg,#EDE7F6,#F3E5F5)' : '#fff',
+              boxShadow: b.earned ? `0 4px 16px ${primary}28, 0 0 0 2px ${primary}35` : '0 2px 10px rgba(0,0,0,.06)',
+              opacity: b.earned ? 1 : .7,  /* NOT full grayscale — just dimmed */
+            }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, borderRadius: '18px 18px 0 0', background: b.earned ? barGrad : '#EEE' }}/>
+              {/* Emoji stays colored — filter only on icon container */}
+              <div style={{
+                fontSize: 26, fontFamily: EF, lineHeight: 1, marginBottom: 5,
+                /* No grayscale filter — opacity on parent handles "unearthed" look */
+              }}>{b.icon}</div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: b.earned ? '#3D0066' : '#888', lineHeight: 1.2 }}>{b.name}</div>
+              {b.earned && <div style={{ fontSize: 9, color: '#00C853', fontWeight: 700, marginTop: 2 }}>✓ הושג!</div>}
             </div>
           ))}
         </div>
 
-        {/* Streak calendar */}
-        <div style={{ marginTop: '16px', background: isDark(t) ? 'rgba(255,255,255,.07)' : '#fff', borderRadius: '18px', padding: '14px', boxShadow: '0 2px 12px rgba(0,0,0,.06)' }}>
-          <div style={{ fontWeight: 800, fontSize: '13px', color: t.warning || '#FF9800', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+        {/* Streak */}
+        <div style={{ marginTop: 14, background: '#fff', borderRadius: 20, padding: '13px 14px', boxShadow: '0 3px 12px rgba(0,0,0,.06)' }}>
+          <div style={{ fontWeight: 800, fontSize: 13, color: '#3D0066', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
             <span style={{ fontFamily: EF }}>🔥</span> סטריק שבועי — {kid.streak} ימים!
           </div>
-          <div style={{ display: 'flex', gap: '5px' }}>
-            {['א','ב','ג','ד','ה','ו','ש'].map((d, i) => {
-              const active = i < kid.streak;
-              return (
-                <div key={i} style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{
-                    height: '40px', borderRadius: '10px',
-                    background: active ? t.progressGrad : (isDark(t) ? 'rgba(255,255,255,.08)' : '#F0F0F0'),
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '16px', fontFamily: EF,
-                    boxShadow: active ? t.btnShadow : 'none',
-                    transition: 'all .3s',
-                    animation: active ? `badgePop .4s ease-out ${i * .07}s both` : 'none',
-                  }}>
-                    {active ? '🔥' : '·'}
-                  </div>
-                  <div style={{ fontSize: '9px', color: textSub(t), marginTop: '3px', fontWeight: 600 }}>{d}</div>
+          <div style={{ display: 'flex', gap: 5 }}>
+            {['א','ב','ג','ד','ה','ו','ש'].map((d, i) => (
+              <div key={i} style={{ flex: 1, textAlign: 'center' }}>
+                <div style={{ height: 36, borderRadius: 9, background: i < kid.streak ? barGrad : '#EDE7F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontFamily: EF, boxShadow: i < kid.streak ? `0 3px 8px ${primary}30` : 'none', transition: 'all .2s' }}>
+                  {i < kid.streak ? '🔥' : '·'}
                 </div>
-              );
-            })}
+                <div style={{ fontSize: 9, color: '#7B5EA7', marginTop: 3 }}>{d}</div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -500,108 +415,86 @@ export function BadgesScreen({ t, kid }) {
   );
 }
 
-/* ════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════
    SHOP SCREEN
-════════════════════════════════════════════════════════ */
+════════════════════════════════════════════════════ */
 export function ShopScreen({ t, kid }) {
-  const [bought,   setBought]   = useState([]);
-  const [flash,    setFlash]    = useState(null);
-  const [showRain, setShowRain] = useState(false);
+  const [bought,    setBought]    = useState([]);
+  const [flashItem, setFlashItem] = useState(null);
+  const [showRain,  setShowRain]  = useState(false);
+
   if (!kid) return null;
 
   const spent     = bought.reduce((s, id) => { const it = SHOP_ITEMS.find(i => i.id === id); return s + (it?.price || 0); }, 0);
   const available = kid.earned - spent;
-  const sheetBg   = t.sheetBg || '#FFFBF0';
+  const primary   = t.primary || '#7C4DFF';
+  const barGrad   = t.progressGrad || 'linear-gradient(90deg,#7C4DFF,#00BCD4)';
 
-  const buy = (item) => {
-    if (available < item.price) return;
+  // Distinct accent per slot — always colored regardless of affordability
+  const ACCENTS = ['#7C4DFF','#00BCD4','#FF9800','#E91E63','#4CAF50','#FF5722','#3F51B5','#009688'];
+
+  const buy = item => {
+    if (available < item.price || bought.includes(item.id)) return;
     setBought(b => [...b, item.id]);
-    setFlash(item);
+    setFlashItem(item);
     setShowRain(true);
-    setTimeout(() => { setFlash(null); setShowRain(false); }, 1500);
+    setTimeout(() => { setFlashItem(null); setShowRain(false); }, 1600);
   };
 
-  const itemColors = [
-    { top: '#FF5722', btn: 'linear-gradient(135deg,#FF5722,#FF9800)' },
-    { top: '#00BCD4', btn: 'linear-gradient(135deg,#00BCD4,#26C6DA)' },
-    { top: '#7C4DFF', btn: 'linear-gradient(135deg,#7C4DFF,#B388FF)' },
-    { top: '#E91E63', btn: 'linear-gradient(135deg,#E91E63,#F48FB1)' },
-    { top: '#00C853', btn: 'linear-gradient(135deg,#00C853,#69F0AE)' },
-    { top: '#FF9800', btn: 'linear-gradient(135deg,#FF9800,#FFB74D)' },
-    { top: '#2196F3', btn: 'linear-gradient(135deg,#2196F3,#64B5F6)' },
-    { top: '#9C27B0', btn: 'linear-gradient(135deg,#9C27B0,#CE93D8)' },
-  ];
-
   return (
-    <div style={{ background: t.bgGrad, minHeight: '100%', fontFamily: "'Heebo',sans-serif" }}>
+    <div style={{ background: t.bgGrad, minHeight: '100%', fontFamily: "'Heebo',sans-serif", display: 'flex', flexDirection: 'column' }}>
       <CoinRain active={showRain} />
 
-      {/* Purchase modal */}
-      {flash && (
+      {/* Flash modal */}
+      {flashItem && (
         <div className="modal-overlay">
-          <div className="anim-pop" style={{
-            background: isDark(t) ? 'rgba(30,10,60,.95)' : '#fff',
-            borderRadius: '28px', padding: '36px 48px', textAlign: 'center',
-            boxShadow: '0 24px 64px rgba(0,0,0,.35)',
-            border: isDark(t) ? '1px solid rgba(255,255,255,.15)' : 'none',
-          }}>
-            <span style={{ fontSize: '72px', fontFamily: EF, display: 'block', animation: 'starBurst .5s ease-out' }}>{flash.icon}</span>
-            <div style={{ fontWeight: 900, fontSize: '22px', color: t.primary, marginTop: '12px' }}>נקנה!</div>
-            <div style={{ fontSize: '14px', color: textSub(t), marginTop: '4px', fontWeight: 600 }}>{flash.name}</div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '5px', marginTop: '8px' }}>
-              {[1,2,3].map(i => <span key={i} style={{ fontSize: '24px', fontFamily: EF, animationDelay: `${i * .12}s` }} className="anim-pop">⭐</span>)}
-            </div>
+          <div className="anim-pop" style={{ background: '#fff', borderRadius: 26, padding: '30px 42px', textAlign: 'center', boxShadow: `0 24px 60px ${primary}44, 0 0 0 3px ${primary}22` }}>
+            <div style={{ fontSize: 68, fontFamily: EF, animation: 'starBurst .5s ease-out' }}>{flashItem.icon}</div>
+            <div style={{ fontWeight: 900, fontSize: 19, color: '#1A0033', marginTop: 9 }}>נקנה! 🎉</div>
+            <div style={{ fontSize: 13, color: primary, marginTop: 4, fontWeight: 700 }}>{flashItem.name}</div>
           </div>
         </div>
       )}
 
       {/* Header */}
-      <div style={{ padding: '20px 18px 16px', position: 'relative', overflow: 'hidden' }}>
-        <FloatDeco t={t} />
+      <div style={{ padding: '18px 16px 14px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+        <span style={{ position:'absolute', top:8,  left:12, fontSize:16, fontFamily:EF, opacity:.32, animation:'floatB 3.5s ease-in-out infinite' }}>🛍️</span>
+        <span style={{ position:'absolute', top:22, left:56, fontSize:13, fontFamily:EF, opacity:.26, animation:'floatB 4.3s ease-in-out infinite .9s' }}>⭐</span>
         <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
-          <span className="anim-float" style={{ fontSize: '50px', fontFamily: EF, display: 'block', marginBottom: '6px' }}>🏪</span>
-          <h2 style={{ fontWeight: 900, fontSize: '22px', color: '#fff', margin: 0, letterSpacing: '-.3px' }}>החנות שלי</h2>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.82)', margin: '4px 0 0' }}>מה תרצה לקנות?</p>
+          <span style={{ fontSize: 46, fontFamily: EF, display: 'block', lineHeight: 1, marginBottom: 5, animation: 'float 3s ease-in-out infinite' }}>🏪</span>
+          <div style={{ fontSize: 21, fontWeight: 900, color: '#fff' }}>החנות שלי</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.72)', marginTop: 2 }}>מה תרצה לקנות?</div>
         </div>
       </div>
 
       {/* Balance card */}
-      <div style={{ padding: '0 14px 14px', position: 'relative', zIndex: 1 }}>
-        <div style={{
-          background: isDark(t) ? 'rgba(255,255,255,.10)' : 'rgba(255,255,255,.94)',
-          borderRadius: '22px', padding: '16px 18px',
-          boxShadow: t.cardShadow, backdropFilter: isDark(t) ? 'blur(10px)' : 'none',
-          border: isDark(t) ? '1px solid rgba(255,255,255,.14)' : 'none',
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontSize: '10px', color: textSub(t), fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '4px' }}>יתרה לקנייה</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '28px', fontFamily: EF }}>🪙</span>
-                <span style={{ fontWeight: 900, fontSize: '28px', color: t.primary, letterSpacing: '-.5px' }}>₪{available}</span>
-              </div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '11px', color: textSub(t), marginBottom: '2px' }}>צברת: <strong style={{ color: textOn(t) }}>₪{kid.earned}</strong></div>
-              <div style={{ fontSize: '11px', color: textSub(t) }}>קנית: <strong style={{ color: textOn(t) }}>₪{spent}</strong></div>
+      <div style={{ padding: '0 14px 12px', flexShrink: 0 }}>
+        <div style={{ background: 'rgba(255,255,255,.97)', borderRadius: 20, padding: '13px 15px', boxShadow: '0 6px 22px rgba(0,0,0,.14)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 10, color: '#7B5EA7', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.3px' }}>יתרה לקנייה</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ fontSize: 24, fontFamily: EF }}>🪙</span>
+              <span style={{ fontSize: 24, fontWeight: 900, color: primary }}>₪{available}</span>
             </div>
           </div>
-
-          {available < 5 && (
-            <div style={{ marginTop: '10px', padding: '9px 14px', background: `${t.primary}14`, borderRadius: '12px', border: `1px solid ${t.primary}25`, fontSize: '12px', color: t.primary, fontWeight: 700, textAlign: 'center' }}>
-              💡 השלם עוד משימות כדי לצבור מטבעות!
-            </div>
-          )}
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 11, color: '#7B5EA7', marginBottom: 2 }}>צברת: <strong style={{ color: primary }}>₪{kid.earned}</strong></div>
+            <div style={{ fontSize: 11, color: '#7B5EA7' }}>קנית: <strong>₪{spent}</strong></div>
+          </div>
         </div>
+        {available < 5 && (
+          <div style={{ marginTop: 8, padding: '8px 14px', background: 'rgba(255,255,255,.18)', borderRadius: 12, fontSize: 11, color: '#FFD54F', fontWeight: 700, textAlign: 'center', border: '1px solid rgba(255,213,79,.35)' }}>
+            💡 השלם עוד משימות כדי לצבור מטבעות!
+          </div>
+        )}
       </div>
 
-      {/* Shop grid */}
-      <div style={{ background: sheetBg, borderTopLeftRadius: '28px', borderTopRightRadius: '28px', padding: '8px 14px 28px', zIndex: 1, position: 'relative' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 12px' }}>
-          <div style={{ width: '38px', height: '4px', background: 'rgba(0,0,0,.12)', borderRadius: '2px' }} />
+      {/* Shop grid — flex:1, no empty gap */}
+      <div style={{ background: t.sheetBg || '#F0EEFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: '10px 14px 28px', flex: 1, overflow: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 12px' }}>
+          <div style={{ width: 32, height: 4, borderRadius: 2, background: 'rgba(0,0,0,.12)' }}/>
         </div>
-
-        <div style={{ fontWeight: 800, fontSize: '14px', color: t.primary, marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+        <div style={{ fontWeight: 800, fontSize: 14, color: '#1A0033', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontFamily: EF }}>🎁</span> מה אפשר לקנות?
         </div>
 
@@ -609,40 +502,45 @@ export function ShopScreen({ t, kid }) {
           {SHOP_ITEMS.map((item, idx) => {
             const canBuy    = available >= item.price;
             const wasBought = bought.includes(item.id);
-            const col       = itemColors[idx % 8];
+            const accent    = ACCENTS[idx % ACCENTS.length];
+
             return (
-              <div key={item.id}
-                className={`shop-card ${canBuy && !wasBought ? 'available' : ''} anim-in`}
-                onClick={() => !wasBought && canBuy && buy(item)}
-                style={{ animationDelay: `${idx * .05}s`, opacity: canBuy || wasBought ? 1 : .62 }}>
+              <div key={item.id} className={`shop-card ${canBuy && !wasBought ? 'available' : ''}`}
+                onClick={() => buy(item)}
+                style={{ cursor: canBuy && !wasBought ? 'pointer' : 'default' }}
+              >
+                {/* Colored stripe — always shown */}
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 5, background: accent, borderRadius: '20px 20px 0 0' }}/>
 
-                {/* Color top stripe */}
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '5px', background: wasBought ? '#00C853' : col.top, borderRadius: '20px 20px 0 0' }} />
+                {/* Emoji icon — NO grayscale, just opacity if locked */}
+                <div style={{
+                  fontSize: 36, fontFamily: EF, display: 'block',
+                  marginBottom: 7, marginTop: 5,
+                  opacity: canBuy || wasBought ? 1 : .55,
+                  animation: canBuy && !wasBought ? 'floatB 3.5s ease-in-out infinite' : 'none',
+                }}>{item.icon}</div>
 
-                <div style={{ marginTop: '8px', fontSize: '40px', fontFamily: EF, display: 'block', marginBottom: '8px', animation: canBuy && !wasBought ? 'floatB 3s ease-in-out infinite' : 'none' }}>
-                  {item.icon}
+                <div style={{ fontWeight: 700, fontSize: 12, color: '#1A0033', marginBottom: 5 }}>{item.name}</div>
+
+                {/* Price — colored even when locked */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center', marginBottom: 9 }}>
+                  <span style={{ fontFamily: EF, fontSize: 13 }}>🪙</span>
+                  <span style={{ fontWeight: 900, fontSize: 14, color: accent }}>₪{item.price}</span>
                 </div>
-                <div style={{ fontWeight: 700, fontSize: '13px', color: '#1A1A2E', marginBottom: '5px' }}>{item.name}</div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'center', marginBottom: '10px' }}>
-                  <span style={{ fontFamily: EF, fontSize: '13px' }}>🪙</span>
-                  <span style={{ fontWeight: 900, fontSize: '15px', color: canBuy ? col.top : '#aaa' }}>₪{item.price}</span>
-                </div>
-
-                <button
-                  style={{
-                    width: '100%', padding: '8px 4px', border: 'none', borderRadius: '50px',
-                    background: wasBought
-                      ? 'linear-gradient(135deg,#E8F5E9,#C8E6C9)'
-                      : canBuy ? col.btn : '#EFEFEF',
-                    color: wasBought ? '#00C853' : canBuy ? '#fff' : '#bbb',
-                    fontFamily: "'Heebo',sans-serif", fontSize: '12px', fontWeight: 800,
-                    cursor: canBuy && !wasBought ? 'pointer' : 'default',
-                    boxShadow: canBuy && !wasBought ? `0 4px 14px ${col.top}44` : 'none',
-                    transition: 'all .15s',
-                  }}
-                >
-                  {wasBought ? '✅ נקנה!' : canBuy ? '🛒 קנה!' : '🔒 צריך יותר מטבעות'}
+                <button style={{
+                  width: '100%', padding: '8px 4px',
+                  border: 'none', borderRadius: 50,
+                  background: wasBought ? '#E8F5E9'
+                    : canBuy ? `linear-gradient(135deg, ${accent}, ${accent}CC)`
+                    : '#F0F0F0',
+                  color: wasBought ? '#00C853' : canBuy ? '#fff' : '#999',
+                  fontFamily: "'Heebo',sans-serif",
+                  fontSize: 11, fontWeight: 800,
+                  cursor: canBuy && !wasBought ? 'pointer' : 'default',
+                  boxShadow: canBuy && !wasBought ? `0 5px 14px ${accent}44` : 'none',
+                }}>
+                  {wasBought ? '✅ נקנה!' : canBuy ? '🛒 קנה!' : '🔒 צריך עוד'}
                 </button>
               </div>
             );
