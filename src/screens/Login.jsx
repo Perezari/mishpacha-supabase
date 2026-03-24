@@ -178,28 +178,6 @@ export default function LoginScreen({ onParentLogin, onParentSignUp, onChildLogi
                 </div>
               </button>
             </div>
-
-            {/* Theme picker */}
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '12px', color: t.textLight, marginBottom: '8px', fontWeight: 600 }}>
-                🎨 בחר מראה:
-              </div>
-              <div style={{ display: 'flex', gap: '7px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                {Object.values(THEMES).map(th => (
-                  <button key={th.id} onClick={() => setThemeId(th.id)} style={{
-                    padding: '6px 11px', borderRadius: '50px', fontSize: '12px', fontWeight: 700,
-                    fontFamily: "'Heebo',sans-serif",
-                    background: themeId === th.id ? th.primary : 'rgba(255,255,255,.85)',
-                    color:      themeId === th.id ? '#fff'   : th.text,
-                    border:     themeId === th.id ? 'none'   : `1.5px solid ${th.primary}44`,
-                    boxShadow:  themeId === th.id ? th.btnShadow : '0 1px 4px rgba(0,0,0,.08)',
-                    transition: 'all .15s',
-                  }}>
-                    <span style={{ fontFamily: EF }}>{th.name.split(' ').at(-1)}</span> {th.label}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         )}
 
@@ -211,7 +189,7 @@ export default function LoginScreen({ onParentLogin, onParentSignUp, onChildLogi
             <Card t={t} style={{ padding: '22px', boxShadow: '0 8px 32px rgba(0,0,0,.10)' }}>
 
               <button onClick={reset} style={{ background: 'none', border: 'none', color: t.textLight, fontSize: '13px', fontWeight: 600, marginBottom: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: "'Heebo',sans-serif", padding: 0 }}>
-                ← חזרה
+                → חזרה
               </button>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
@@ -301,7 +279,7 @@ export default function LoginScreen({ onParentLogin, onParentSignUp, onChildLogi
             <Card t={t} style={{ padding: '24px', boxShadow: '0 8px 32px rgba(0,0,0,.10)' }}>
 
               <button onClick={reset} style={{ background: 'none', border: 'none', color: t.textLight, fontSize: '13px', fontWeight: 600, marginBottom: '14px', cursor: 'pointer', fontFamily: "'Heebo',sans-serif", padding: 0 }}>
-                ← חזרה
+                → חזרה
               </button>
 
               <div style={{ textAlign: 'center', marginBottom: '20px' }}>
@@ -327,7 +305,7 @@ export default function LoginScreen({ onParentLogin, onParentSignUp, onChildLogi
                       border: t.cardBorder || '2px solid rgba(0,0,0,.08)',
                       fontSize: '14px', color: t.text, background: t.inputBg,
                       outline: 'none', direction: 'ltr', textAlign: 'center',
-                      fontFamily: 'monospace', fontWeight: 600,
+                      fontWeight: 400,
                     }}
                   />
                 </div>
@@ -354,7 +332,7 @@ export default function LoginScreen({ onParentLogin, onParentSignUp, onChildLogi
             <Card t={t} style={{ padding: '24px', boxShadow: '0 8px 32px rgba(0,0,0,.10)' }}>
 
               <button onClick={() => { setChildStep('code'); setErr(''); }} style={{ background: 'none', border: 'none', color: t.textLight, fontSize: '13px', fontWeight: 600, marginBottom: '14px', cursor: 'pointer', fontFamily: "'Heebo',sans-serif", padding: 0 }}>
-                ← חזרה
+                → חזרה
               </button>
 
               <div style={{ textAlign: 'center', marginBottom: '20px' }}>

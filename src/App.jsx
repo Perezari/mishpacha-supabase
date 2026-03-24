@@ -167,38 +167,43 @@ export default function App() {
       />
 
       {/* Main area — gradient bg, centered content column */}
+      {/* ── Centered phone-column ── */}
       <div style={{
         flex: 1,
         height: '100vh',
-        overflowY: 'auto',
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'flex-start',
-        padding: '24px 20px',
-        /* background inherits effT.bgGrad from parent */
+        alignItems: 'center',
+        padding: '16px',
       }}>
-        {/* ── Compact content card ── */}
+        {/* Card = fixed height, like a phone screen */}
         <div style={{
           width: '100%',
-          maxWidth: 480,           /* phone-like column */
-          background: '#FFFFFF',
+          maxWidth: 480,
+          height: 'calc(100vh - 32px)',   /* fixed height — always fills viewport */
           borderRadius: 24,
           overflow: 'hidden',
-          boxShadow: '0 8px 40px rgba(0,0,0,.18), 0 2px 8px rgba(0,0,0,.08)',
-          minHeight: 'calc(100vh - 48px)',
+          boxShadow: '0 8px 36px rgba(0,0,0,.18), 0 2px 8px rgba(0,0,0,.07)',
           display: 'flex',
           flexDirection: 'column',
+          background: effT.bgGrad,        /* card bg = theme gradient, no white gap */
           position: 'relative',
         }}>
           {error && <ErrorBanner msg={error} />}
 
-          {/* Screen content fills the column */}
-          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          {/* Screen content — scrolls inside the fixed-height card */}
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}>
             {getContent()}
           </div>
+
           {showDelete && <DeleteChildModal t={t} kid={activeKid} loading={deleting} onConfirm={handleDeleteKid} onCancel={() => setShowDelete(false)} />}
 
-          {/* Bottom nav inside the card on desktop too */}
           <BottomNav t={effT} items={navWithBadge} active={activeScreenId} onNav={nav} />
         </div>
       </div>
