@@ -75,8 +75,6 @@ export default function App() {
   useEffect(() => {
     if (!effT) return;
     
-    // כאן אנחנו מושכים צבע אחיד מתוך ערכת הנושא. 
-    // ודא שיש לך מאפיין כזה (כמו primary או headerColor) בקובץ themes.js
     const targetColor = effT.primary || '#ffffff'; 
 
     let metaThemeColor = document.querySelector('meta[name="theme-color"]');
@@ -86,7 +84,12 @@ export default function App() {
       document.head.appendChild(metaThemeColor);
     }
     metaThemeColor.setAttribute('content', targetColor);
-  }, [effT]); // ירוץ מחדש בכל פעם שהערכת נושא מתחלפת
+
+    // השורה החדשה! נשנה את הרקע של כל העמוד (מחוץ לאפליקציה של הריאקט) 
+    // כדי שספארי יבין שזה צבע הרקע העליון
+    document.body.style.backgroundColor = targetColor; 
+
+  }, [effT]); 
   /* ───────────────────────────────────────────────── */
 
   /* ── Show loader ONLY on first load (no data yet).
