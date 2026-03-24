@@ -129,6 +129,19 @@ export const subscribeToKids = (familyId, cb) =>
     .on('postgres_changes', { event: '*', schema: 'public', table: 'kids', filter: `family_id=eq.${familyId}` }, cb)
     .subscribe();
 
+/* ── KID MUTATIONS ───────────────────────────────────── */
+export const deleteKid = (kidId) =>
+  supabase.from('kids').delete().eq('id', kidId);
+
+// update name, age, avatar (profile fields — separate from goal/theme)
+export const updateKidProfile = (kidId, { name, age, avatar }) => {
+  const map = {};
+  if (name   !== undefined) map.name   = name;
+  if (age    !== undefined) map.age    = age;
+  if (avatar !== undefined) map.avatar = avatar;
+  return supabase.from('kids').update(map).eq('id', kidId).select().single();
+};
+
 /* ── NORMALIZERS ─────────────────────────────────────── */
 export const normalizeKid = (row) => ({
   id: row.id, familyId: row.family_id,

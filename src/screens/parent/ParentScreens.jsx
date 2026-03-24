@@ -13,7 +13,7 @@ const Field = ({ t, label, children }) => (
 /* ════════════════════════════════════════════════
    KID DETAIL
 ════════════════════════════════════════════════ */
-export function KidDetailScreen({ t, kid, onBack, onAddTask, onApprove, onReject }) {
+export function KidDetailScreen({ t, kid, onBack, onAddTask, onApprove, onReject, onEdit, onDelete }) {
   if (!kid) return null;
   const pct = Math.round((kid.earned / kid.goalAmount) * 100);
   return (
@@ -21,7 +21,16 @@ export function KidDetailScreen({ t, kid, onBack, onAddTask, onApprove, onReject
       <Header t={t} back="חזרה" onBack={onBack}
         title={<span><span style={{ fontFamily: EF }}>{kid.avatar}</span> {kid.name}</span>}
         subtitle={`גיל ${kid.age} · 🔥 ${kid.streak} ימי סטריק`}
-        right={<span style={{ fontSize: '36px', fontFamily: EF }}>{kid.goalIcon}</span>}
+        right={
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button onClick={onEdit} style={{ background: 'rgba(255,255,255,.22)', border: '1.5px solid rgba(255,255,255,.4)', color: '#fff', borderRadius: '50px', padding: '5px 12px', fontFamily: "'Heebo',sans-serif", fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontFamily: EF }}>✏️</span> ערוך
+            </button>
+            <button onClick={onDelete} style={{ background: 'rgba(255,59,59,.35)', border: '1.5px solid rgba(255,100,100,.45)', color: '#fff', borderRadius: '50px', padding: '5px 12px', fontFamily: "'Heebo',sans-serif", fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontFamily: EF }}>🗑️</span> מחק
+            </button>
+          </div>
+        }
       />
       <div style={{ padding: '12px 14px' }}>
 
@@ -76,6 +85,90 @@ export function KidDetailScreen({ t, kid, onBack, onAddTask, onApprove, onReject
             );
           })
         }
+      </div>
+    </div>
+  );
+}
+
+
+/* ════════════════════════════════════════════════
+   EDIT CHILD
+════════════════════════════════════════════════ */
+export function EditChildScreen({ t, kid, onSave, onBack }) {
+  const [name,    setName]    = useState(kid?.name    || '');
+  const [age,     setAge]     = useState(String(kid?.age || ''));
+  const [avatar,  setAvatar]  = useState(kid?.avatar  || '🐱');
+  const [saving,  setSaving]  = useState(false);
+  const [saved,   setSaved]   = useState(false);
+
+  if (!kid) return null;
+
+  const handle = async () => {
+    if (!name || !age) return;
+    setSaving(true);
+    await onSave({ name: name.trim(), age: parseInt(age), avatar });
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => { setSaved(false); onBack(); }, 1100);
+  };
+
+  return (
+    <div style={{ background: t.bgGrad, fontFamily: "'Heebo',sans-serif", color: t.text, minHeight: '100%' }}>
+      <Header t={t} title={`עריכת ${kid.name} ✏️`} back="חזרה" onBack={onBack} />
+      {saved && <SavedModal t={t} icon="✅" text="הפרטים עודכנו!" />}
+      <div style={{ padding: '12px 14px' }}>
+        <div style={{ background: '#fff', borderRadius: t.radius, boxShadow: t.cardShadow || t.shadow, padding: '16px' }}>
+
+          {/* Avatar picker */}
+          <div style={{ textAlign: 'center', marginBottom: '14px' }}>
+            <div style={{ fontSize: '56px', fontFamily: EF, marginBottom: '6px' }}>{avatar}</div>
+            <div style={{ fontSize: '11px', color: t.textLight, marginBottom: '7px' }}>בחר/י אווטאר:</div>
+            <div className="avatar-grid">
+              {AVATARS.map(a => (
+                <button key={a} onClick={() => setAvatar(a)} style={{ fontSize: '19px', padding: '5px', borderRadius: t.radius, fontFamily: EF, background: avatar === a ? t.primary + '22' : t.progressBg, border: avatar === a ? `2px solid ${t.primary}` : '2px solid transparent' }}>{a}</button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <Field t={t} label="שם ✏️">
+              <InputF t={t} placeholder="שם הילד/ה..." value={name} onChange={e => setName(e.target.value)} autoFocus />
+            </Field>
+            <Field t={t} label="גיל 🎂">
+              <InputF t={t} placeholder="גיל" type="number" value={age} onChange={e => setAge(e.target.value)} />
+            </Field>
+            <Btn t={t} onClick={handle} full disabled={!name || !age || saving} style={{ padding: '11px', fontSize: '14px' }}>
+              {saving ? '⏳ שומר...' : '💾 שמור שינויים'}
+            </Btn>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════
+   DELETE CHILD CONFIRM MODAL
+════════════════════════════════════════════════ */
+export function DeleteChildModal({ t, kid, onConfirm, onCancel, loading }) {
+  if (!kid) return null;
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div className="anim-pop" style={{ background: '#fff', borderRadius: t.radius, padding: '24px 20px', maxWidth: 320, width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,.25)' }}>
+        <div style={{ fontSize: '52px', fontFamily: EF, marginBottom: '10px' }}>{kid.avatar}</div>
+        <div style={{ fontWeight: 900, fontSize: '17px', color: t.text, marginBottom: '6px' }}>מחיקת {kid.name}</div>
+        <div style={{ fontSize: '13px', color: t.textLight, marginBottom: '20px', lineHeight: 1.5 }}>
+          פעולה זו תמחק את כל המשימות וההיסטוריה של הילד/ה.<br/>
+          <strong style={{ color: t.danger }}>לא ניתן לשחזר!</strong>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={onCancel} style={{ flex: 1, padding: '11px', background: t.progressBg, color: t.text, border: 'none', borderRadius: t.btnRadius, fontFamily: "'Heebo',sans-serif", fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+            ביטול
+          </button>
+          <button onClick={onConfirm} disabled={loading} style={{ flex: 1, padding: '11px', background: t.danger, color: '#fff', border: 'none', borderRadius: t.btnRadius, fontFamily: "'Heebo',sans-serif", fontSize: '13px', fontWeight: 700, cursor: loading ? 'wait' : 'pointer', boxShadow: `0 4px 14px ${t.danger}44` }}>
+            {loading ? '⏳...' : '🗑️ מחק'}
+          </button>
+        </div>
       </div>
     </div>
   );

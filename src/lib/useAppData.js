@@ -261,7 +261,25 @@ export function useAppData() {
       if (error) reloadKids();
     },
 
-    rejectTask: async (kidId, taskId) => {
+    deleteKid: async (kidId) => {
+      // Delete all tasks for this kid first (cascade may not be set)
+      await db.supabase?.from('tasks').delete().eq('kid_id', kidId);
+      const { error } = await db.deleteKid(kidId);
+      if (!error) {
+        setKids(ks => ks.filter(k => k.id !== kidId));
+      }
+      return { error };
+    },
+
+    updateKidProfile: async (kidId, updates) => {
+      const { data, error } = await db.updateKidProfile(kidId, updates);
+      if (!error) {
+        setKids(ks => ks.map(k => k.id === kidId ? { ...k, ...updates } : k));
+      }
+      return { data, error };
+    },
+
+        rejectTask: async (kidId, taskId) => {
       setKids(ks => ks.map(k => k.id !== kidId ? k : {
         ...k, tasks: k.tasks.map(t => t.id === taskId ? { ...t, status: 'rejected' } : t),
       }));

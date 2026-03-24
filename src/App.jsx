@@ -6,7 +6,7 @@ import { BottomNav, Sidebar } from './components/Atoms.jsx';
 import LoginScreen     from './screens/Login.jsx';
 import SettingsScreen  from './screens/Settings.jsx';
 import ParentDashboard from './screens/parent/Dashboard.jsx';
-import { KidDetailScreen, AddChildScreen, AddTaskScreen, GoalSettingScreen, ApprovalsScreen } from './screens/parent/ParentScreens.jsx';
+import { KidDetailScreen, AddChildScreen, AddTaskScreen, GoalSettingScreen, ApprovalsScreen, EditChildScreen, DeleteChildModal } from './screens/parent/ParentScreens.jsx';
 import { ChildDashboard, BadgesScreen, ShopScreen } from './screens/child/ChildScreens.jsx';
 
 const PARENT_NAV = [
@@ -52,7 +52,9 @@ export default function App() {
   } = useAppData();
 
   const [screen, setScreen] = useState('dashboard');
-  const [selKid, setSelKid] = useState(null);
+  const [selKid, setSelKid]     = useState(null);
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleting,   setDeleting]   = useState(false);
   const isDesktop = useIsDesktop();
 
   const t   = THEMES[themeId] || THEMES['C'];
@@ -107,7 +109,8 @@ export default function App() {
     if (role === 'parent') {
       switch (screen) {
         case 'dashboard':  return <ParentDashboard t={t} kids={kids} onNav={nav} onKidSelect={id => setSelKid(id)} />;
-        case 'kidDetail':  return <KidDetailScreen t={t} kid={activeKid} onBack={() => nav('dashboard')} onAddTask={() => nav('addTask')} onApprove={(ki,ti) => actions.approveTask(ki,ti)} onReject={(ki,ti) => actions.rejectTask(ki,ti)} />;
+        case 'kidDetail':  return <KidDetailScreen t={t} kid={activeKid} onBack={() => nav('dashboard')} onAddTask={() => nav('addTask')} onApprove={(ki,ti) => actions.approveTask(ki,ti)} onReject={(ki,ti) => actions.rejectTask(ki,ti)} onEdit={() => nav('editChild')} onDelete={() => setShowDelete(true)} />;
+        case 'editChild':   return <EditChildScreen t={t} kid={activeKid} onBack={() => nav('kidDetail')} onSave={async (updates) => { await actions.updateKidProfile(selKid, updates); }} />;
         case 'addChild':   return <AddChildScreen t={t} onSave={async d => { await actions.addKid(d); nav('dashboard'); }} onBack={() => nav('dashboard')} />;
         case 'addTask':    return <AddTaskScreen t={t} kids={kids} preKidId={selKid} onSave={d => actions.addTask(d)} onBack={() => nav(selKid ? 'kidDetail' : 'dashboard')} />;
         case 'goals':      return <GoalSettingScreen t={t} kids={kids} onSave={({ kidId, goalName, goalIcon, goalAmount }) => actions.setGoal(kidId, { goalName, goalIcon, goalAmount })} onBack={() => nav('dashboard')} />;
@@ -125,6 +128,15 @@ export default function App() {
         default:           return <ChildDashboard t={childT} kid={activeKid} onCompleteTask={id => actions.completeTask(id)} onNav={nav} />;
       }
     }
+  };
+
+  const handleDeleteKid = async () => {
+    setDeleting(true);
+    await actions.deleteKid(selKid);
+    setDeleting(false);
+    setShowDelete(false);
+    setSelKid(null);
+    nav('dashboard');
   };
 
   /* ════════════════════════════════════════════════════
@@ -184,6 +196,7 @@ export default function App() {
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             {getContent()}
           </div>
+          {showDelete && <DeleteChildModal t={t} kid={activeKid} loading={deleting} onConfirm={handleDeleteKid} onCancel={() => setShowDelete(false)} />}
 
           {/* Bottom nav inside the card on desktop too */}
           <BottomNav t={effT} items={navWithBadge} active={activeScreenId} onNav={nav} />
@@ -201,6 +214,7 @@ export default function App() {
       <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
         {getContent()}
       </div>
+      {showDelete && <DeleteChildModal t={t} kid={activeKid} loading={deleting} onConfirm={handleDeleteKid} onCancel={() => setShowDelete(false)} />}
       <BottomNav t={effT} items={navWithBadge} active={activeScreenId} onNav={nav} />
     </div>
   );
