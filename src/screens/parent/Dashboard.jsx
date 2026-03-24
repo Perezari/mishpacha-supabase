@@ -32,7 +32,7 @@ export default function ParentDashboard({ t, kids, onNav, onKidSelect }) {
             <div style={{ fontSize: '11px', opacity: .82, fontWeight: 500 }}>שלום, הורים! 👋</div>
             <div style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '-.2px', lineHeight: 1.2 }}>לוח הבקרה</div>
           </div>
-          <span style={{ fontSize: '32px', fontFamily: EF, lineHeight: 1 }}>👨‍👩‍👧‍👦</span>
+          <span style={{ fontSize: '32px', fontFamily: EF, lineHeight: 1 }}></span>
         </div>
 
         {/* Stat chips inline */}

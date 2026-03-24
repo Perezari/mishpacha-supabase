@@ -79,7 +79,7 @@ const THEMES = {
     danger:    '#FF1744',
     warning:   '#FFAB40',
     purple:    '#EA80FC',
-    text:      '#FFFFFF',
+    text:      'rgb(94, 96, 206)',
     textMid:   'rgba(255,255,255,.82)',
     textLight: 'rgba(255,255,255,.55)',
     textOnPrimary: '#fff',
@@ -99,43 +99,59 @@ const THEMES = {
     coinBg: 'linear-gradient(145deg, #FFD700 0%, #FF9800 50%, #FFE082 100%)',
   },
 
-  /* ══════════════════════════════════════════════════════
-     CHILD CONCEPT 3 — "Magic Forest"
-     Rich emerald + violet + gold.
-     Enchanted, warm, adventurous.
+/* ══════════════════════════════════════════════════════
+     CHILD CONCEPT 3 — "Magic Forest" (FIXED)
+     Fresh Greens + Lilac + Gold.
+     Bright, readable, and truly enchanted.
   ══════════════════════════════════════════════════════ */
   FOREST: {
     id: 'FOREST', name: 'Magic Forest 🌿', label: 'יער', isGame: true,
     font: "'Heebo', sans-serif",
-    bgGrad:      'linear-gradient(170deg, #1B5E20 0%, #2E7D32 30%, #388E3C 60%, #558B2F 100%)',
-    cardBg:      'rgba(255,255,255,.96)',
-    panelBg:     'rgba(255,255,255,.94)',
+    
+    // רקע רענן וחי, לא חשוך
+    bgGrad:      'linear-gradient(170deg, #2E7D32 0%, #4CAF50 50%, #81C784 100%)',
+    
+    cardBg:      'rgba(255,255,255,.98)',
+    panelBg:     'rgba(255,255,255,.95)',
     sheetBg:     '#F1FFF4',
-    primary:   '#2E7D32',
-    secondary: '#AB47BC',
-    accent:    '#FFD600',
-    success:   '#00C853',
-    danger:    '#FF3D57',
-    warning:   '#FF9800',
-    purple:    '#7B1FA2',
-    text:      '#1B2A1B',
-    textMid:   '#2D4A2D',
-    textLight: '#5A7A5A',
-    textOnPrimary: '#fff',
+    
+    // ירוק יער קלאסי לכפתורים וכותרות - קריא מאוד עם טקסט לבן
+    primary:   '#1B5E20', 
+    
+    // סגול-לילך בהיר כצבע משני (למילה "משפחה", כפתורים משניים) - בולט מעולה על הרקע הירוק
+    secondary: '#CE93D8', 
+    
+    accent:    '#FFC107', // זהב בהיר יותר
+    success:   '#00E676',
+    danger:    '#FF5252',
+    warning:   '#FFA000',
+    purple:    '#BA68C8',
+    
+    // טקסטים - שחור-ירוק לקריאות מקסימלית על כרטיסים לבנים
+    text:      '#1A2A1A', 
+    textMid:   '#2A4A2A', 
+    textLight: '#5A7A5A', 
+    textOnPrimary: '#ffffff', 
+    
     radius: '20px', btnRadius: '50px', inputRadius: '14px', chipRadius: '50px',
-    shadow:    '0 6px 24px rgba(46,125,50,.22)',
+    
+    shadow:    '0 6px 24px rgba(27,94,32,.25)', 
     cardShadow:'0 4px 20px rgba(0,0,0,.08)',
-    btnShadow: '0 6px 20px rgba(46,125,50,.45)',
-    successShadow: '0 6px 20px rgba(0,200,83,.40)',
+    btnShadow: '0 6px 20px rgba(27,94,32,.40)', 
+    successShadow: '0 6px 20px rgba(0,230,118,.40)',
+    
     border: 'none', cardBorder: 'none',
-    headerGrad:  'linear-gradient(135deg, #1B5E20 0%, #558B2F 50%, #AB47BC 100%)',
-    coinGrad:    'linear-gradient(145deg, #FFD700, #FF9800)',
-    progressGrad:'linear-gradient(90deg, #2E7D32, #AB47BC)',
-    successGrad: 'linear-gradient(135deg, #00C853, #69F0AE)',
+    
+    headerGrad:  'linear-gradient(135deg, #1B5E20 0%, #388E3C 100%)',
+    coinGrad:    'linear-gradient(145deg, #FFD700, #FFB300)',
+    progressGrad:'linear-gradient(90deg, #1B5E20, #CE93D8)',
+    successGrad: 'linear-gradient(135deg, #00E676, #69F0AE)',
+    
     navBg:       'rgba(255,255,255,.97)',
-    inputBg:     '#F1FFF4',
-    progressBg:  'rgba(0,0,0,.08)',
-    coinBg: 'linear-gradient(145deg, #FFD700 0%, #FF9800 50%, #FFE082 100%)',
+    inputBg:     '#E8F5E9', 
+    progressBg:  'rgba(255,255,255,.3)', 
+    
+    coinBg: 'linear-gradient(145deg, #FFF176 0%, #FFB300 50%, #FF8F00 100%)',
   },
 
   /* ══════════════════════════════════════════════════════
