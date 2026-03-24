@@ -71,6 +71,24 @@ export default function App() {
     ? (activeKid?.name || 'ילד/ה')
     : (family?.name || 'הורה');
 
+  /* ── PWA Dynamic Theme Color ────────────────────── */
+  useEffect(() => {
+    if (!effT) return;
+    
+    // כאן אנחנו מושכים צבע אחיד מתוך ערכת הנושא. 
+    // ודא שיש לך מאפיין כזה (כמו primary או headerColor) בקובץ themes.js
+    const targetColor = effT.primary || '#ffffff'; 
+
+    let metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (!metaThemeColor) {
+      metaThemeColor = document.createElement('meta');
+      metaThemeColor.name = 'theme-color';
+      document.head.appendChild(metaThemeColor);
+    }
+    metaThemeColor.setAttribute('content', targetColor);
+  }, [effT]); // ירוץ מחדש בכל פעם שהערכת נושא מתחלפת
+  /* ───────────────────────────────────────────────── */
+
   /* ── Show loader ONLY on first load (no data yet).
      If loading but we already have profile/childSession,
      that's a background refresh — don't interrupt the user. ── */
