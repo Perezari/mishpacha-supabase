@@ -149,9 +149,9 @@ export default function App() {
   if (!isLoggedIn) return (
     <div style={{ minHeight: '100vh', background: effT.bgGrad, overflowY: 'auto' }}>
       <LoginScreen
-        onParentLogin={(e, p) => actions.signIn(e, p)}
+        onParentLogin={async (e, p) => { const r = await actions.signIn(e, p); if (!r.error) setScreen('dashboard'); return r; }}
         onParentSignUp={(e, p) => actions.signUp(e, p)}
-        onChildLogin={(kidId, fId) => actions.childLogin(kidId, fId)}
+        onChildLogin={(kidId, fId) => { setScreen('dashboard'); actions.childLogin(kidId, fId); }}
       />
     </div>
   );
@@ -226,7 +226,7 @@ export default function App() {
         familyName={family?.name}
         role={role}
         userName={userName}
-        onLogout={actions.signOut}
+        onLogout={() => { setScreen('dashboard'); actions.signOut(); }}
       />
 
       {/* Main area — gradient bg, centered content column */}
