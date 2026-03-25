@@ -162,7 +162,7 @@ export default function SettingsScreen({
         <Section t={t}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
             <div style={{ fontSize: 34, fontFamily: EF, background: isChild ? `${primary}18` : (t.progressBg || '#EEF2FF'), borderRadius: '50%', width: 54, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: isChild ? `2px solid ${primary}30` : 'none' }}>
-              {isChild ? (kid?.avatar || '🧒') : '👨‍👩‍👧'}
+              {isChild ? (kid?.avatar || '🧒') : '👔'}
             </div>
             <div>
               <div style={{ fontWeight: 900, fontSize: 16 }}>{isChild ? (kid?.name || 'ילד/ה') : 'הורה'}</div>

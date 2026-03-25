@@ -193,7 +193,7 @@ export const Sidebar = ({ t, items, active, onNav, familyName, role, userName, o
     <div style={{ padding: '10px 14px 14px', borderTop: `1px solid ${t.progressBg}` }}>
       {/* Who is logged in */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: t.progressBg, borderRadius: '10px', marginBottom: '8px' }}>
-        <span style={{ fontSize: '18px', fontFamily: EF }}>{role === 'parent' ? '👨‍👩‍👧' : '🧒'}</span>
+        <span style={{ fontSize: '18px', fontFamily: EF }}>{role === 'parent' ? '👔' : '🧒'}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '12px', fontWeight: 800, color: t.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {userName || (role === 'parent' ? 'הורה' : 'ילד/ה')}
