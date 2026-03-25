@@ -11,7 +11,7 @@ const Chip = ({ label, value, color, onClick, badge }) => (
   </div>
 );
 
-export default function ParentDashboard({ t, kids, onNav, onKidSelect, pendingPurchases = 0 }) {
+export default function ParentDashboard({ t, kids, onNav, onKidSelect, onApprove, onReject }) {
   const [tab, setTab] = useState('kids');
 
   const allTasks    = kids.flatMap(k => k.tasks);
@@ -49,8 +49,7 @@ export default function ParentDashboard({ t, kids, onNav, onKidSelect, pendingPu
             { l: 'הוסף משימה', icon: '➕', c: 'rgba(255,255,255,.28)', n: 'addTask'  },
             { l: 'הוסף ילד/ה', icon: '👶', c: 'rgba(255,255,255,.22)', n: 'addChild' },
             { l: 'מטרות',      icon: '🎯', c: 'rgba(255,255,255,.22)', n: 'goals'    },
-            { l: `אישורים${pending > 0 ? ` (${pending})` : ''}${pendingPurchases > 0 ? ` +${pendingPurchases}🛍️` : ''}`, icon: '✅', c: 'rgba(255,255,255,.22)', n: 'approvals' },
-            { l: 'חנות', icon: '🛍️', c: 'rgba(255,255,255,.22)', n: 'manageShop' },
+            { l: `אישורים${pending > 0 ? ` (${pending})` : ''}`, icon: '✅', c: 'rgba(255,255,255,.22)', n: 'approvals' },
           ].map((a, i) => (
             <button key={i} onClick={() => onNav(a.n)} style={{
               display: 'inline-flex', alignItems: 'center', gap: '5px',
@@ -124,6 +123,23 @@ export default function ParentDashboard({ t, kids, onNav, onKidSelect, pendingPu
                       </div>
                       <span style={{ fontSize: '10px', color: t.primary, fontWeight: 700 }}>פרטים ←</span>
                     </div>
+
+                    {/* Quick approve — inline for pending tasks */}
+                    {kp > 0 && (
+                      <div onClick={e => e.stopPropagation()} style={{ marginTop: '8px', borderTop: `1px solid ${t.progressBg}`, paddingTop: '8px' }}>
+                        <div style={{ fontSize: '10px', color: '#92600A', fontWeight: 700, marginBottom: '5px' }}>
+                          ⚡ אישור מהיר — {kp} משימ{kp === 1 ? 'ה' : 'ות'} ממתינ{kp === 1 ? 'ת' : 'ות'}:
+                        </div>
+                        {kid.tasks.filter(tk => tk.status === 'pending').map(tk => (
+                          <div key={tk.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', background: '#FFFBEB', borderRadius: t.inputRadius, padding: '5px 8px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 700, flex: 1, color: t.text }}>{tk.title}</span>
+                            <span style={{ fontSize: '10px', fontWeight: 800, color: t.primary }}>₪{tk.reward}</span>
+                            <button onClick={() => onApprove?.(kid.id, tk.id)} style={{ padding: '3px 9px', background: t.secondary, color: '#fff', border: 'none', borderRadius: '50px', fontFamily: "'Heebo',sans-serif", fontSize: '10px', fontWeight: 800, cursor: 'pointer' }}>✅ אשר</button>
+                            <button onClick={() => onReject?.(kid.id, tk.id)}  style={{ padding: '3px 9px', background: '#f0f0f0', color: t.danger, border: 'none', borderRadius: '50px', fontFamily: "'Heebo',sans-serif", fontSize: '10px', fontWeight: 800, cursor: 'pointer' }}>❌</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })

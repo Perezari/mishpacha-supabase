@@ -170,7 +170,7 @@ export default function App() {
   const getContent = () => {
     if (role === 'parent') {
       switch (screen) {
-        case 'dashboard':  return <ParentDashboard t={t} kids={kids} onNav={nav} onKidSelect={id => setSelKid(id)} pendingPurchases={pendingPurchaseCount} />;
+        case 'dashboard':  return <ParentDashboard t={t} kids={kids} onNav={nav} onKidSelect={id => setSelKid(id)} pendingPurchases={pendingPurchaseCount} onApprove={(ki,ti) => actions.approveTask(ki,ti)} onReject={(ki,ti) => actions.rejectTask(ki,ti)} />;
         case 'kidDetail':  return <KidDetailScreen t={t} kid={activeKid} onBack={() => nav('dashboard')} onAddTask={() => nav('addTask')} onApprove={(ki,ti) => actions.approveTask(ki,ti)} onReject={(ki,ti) => actions.rejectTask(ki,ti)} onEdit={() => nav('editChild')} onDelete={() => setShowDelete(true)} />;
         case 'editChild':   return <EditChildScreen t={t} kid={activeKid} onBack={() => nav('kidDetail')} onSave={async (updates) => { await actions.updateKidProfile(selKid, updates); }} />;
         case 'addChild':   return <AddChildScreen t={t} onSave={async d => { await actions.addKid(d); nav('dashboard'); }} onBack={() => nav('dashboard')} />;
