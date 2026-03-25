@@ -156,7 +156,6 @@ export const Sidebar = ({ t, items, active, onNav, familyName, role, userName, o
     {/* Logo */}
     <div style={{ padding: '16px 18px 14px', borderBottom: `1px solid ${t.progressBg}` }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-        <span style={{ fontSize: '28px', fontFamily: EF }}>👨‍👩‍👧‍👦</span>
         <div>
           <div style={{ fontWeight: 900, fontSize: '15px', color: t.text, lineHeight: 1.1, letterSpacing: '-.2px' }}>
             <span style={{ color: t.primary }}>משפחה</span>{' '}

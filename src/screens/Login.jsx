@@ -124,9 +124,6 @@ export default function LoginScreen({ onParentLogin, onParentSignUp, onChildLogi
 
         {/* ── Logo — compact on mobile ───────────────── */}
         <div className="anim-pop" style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <span style={{ fontSize: '56px', lineHeight: 1, fontFamily: EF, filter: 'drop-shadow(0 3px 10px rgba(0,0,0,.12))' }}>
-            👨‍👩‍👧‍👦
-          </span>
           <h1 style={{ fontSize: '26px', fontWeight: 900, color: t.text, margin: '10px 0 4px', letterSpacing: '-.4px', fontFamily: "'Heebo',sans-serif" }}>
             <span style={{ color: t.primary }}>משפחה</span>{' '}
             <span style={{ color: t.secondary }}>במשימה</span>

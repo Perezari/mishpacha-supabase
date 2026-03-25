@@ -189,7 +189,7 @@ export default function SettingsScreen({
 
         {/* Family — parent only */}
         {!isChild && (
-          <Section t={t} title="👨‍👩‍👧‍👦 הגדרות משפחה">
+          <Section t={t} title="הגדרות משפחה">
             <div style={{ marginBottom: 12 }}>
               <Lbl t={t}>שם המשפחה</Lbl>
               {editingName ? (
