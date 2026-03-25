@@ -4,6 +4,12 @@
       "eas": {
         "projectId": "d0f96f35-e8d8-4e4f-8a45-deee60d95f9e"
       }
+    },
+    "ios": {
+      "bundleIdentifier": "com.ariperets.mishpachabmishima",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     }
   }
 }
