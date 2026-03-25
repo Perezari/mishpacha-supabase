@@ -74,34 +74,50 @@ export function KidDetailScreen({ t, kid, onBack, onAddTask, onApprove, onReject
 
         {kid.tasks.length === 0
           ? <EmptyState t={t} icon="📋" title="אין משימות" action="+ הוסף" onAction={onAddTask} />
-          : kid.tasks.map(task => {
-            const sm = { done: { c: t.secondary, l: '✅ הושלם' }, pending: { c: '#F59E0B', l: '⏳ ממתין לאישור' }, todo: { c: t.textLight, l: '📌 לביצוע' }, rejected: { c: t.danger, l: '❌ נדחה' } }[task.status];
-            return (
-              <div key={task.id} style={{ background: '#fff', borderRadius: t.radius, boxShadow: t.shadow, border: t.cardBorder || 'none', padding: '10px 12px', marginBottom: '6px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: sm?.c+'18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0, fontFamily: EF }}>
-                    {task.status === 'done' ? '✅' : task.status === 'pending' ? '⏳' : task.status === 'rejected' ? '❌' : '📌'}
+          : (() => {
+            const groups = [
+              { key: 'pending',  icon: '⏳', label: 'ממתין לאישור', color: '#F59E0B', bg: '#FFFBEB' },
+              { key: 'todo',     icon: '📌', label: 'לביצוע',       color: t.primary, bg: t.progressBg },
+              { key: 'done',     icon: '✅', label: 'הושלמו',       color: t.secondary, bg: '#F0FDF4' },
+              { key: 'rejected', icon: '❌', label: 'נדחו',          color: t.danger,    bg: '#FFF1F2' },
+            ];
+            return groups.map(g => {
+              const tasks = kid.tasks.filter(tsk => tsk.status === g.key);
+              if (tasks.length === 0) return null;
+              return (
+                <div key={g.key} style={{ marginBottom: 12 }}>
+                  {/* Group header */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, padding: '5px 10px', background: g.bg, borderRadius: t.inputRadius, border: `1px solid ${g.color}22` }}>
+                    <span style={{ fontSize: 13, fontFamily: EF }}>{g.icon}</span>
+                    <span style={{ fontWeight: 800, fontSize: 11, color: g.color }}>{g.label}</span>
+                    <span style={{ marginRight: 'auto', background: g.color+'22', color: g.color, borderRadius: 50, padding: '0px 7px', fontSize: 10, fontWeight: 800 }}>{tasks.length}</span>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '13px' }}>{task.title}</span>
-                      {task.isDaily && <span style={{ fontSize: '9px', background: '#FFF3CD', color: '#856404', padding: '1px 5px', borderRadius: '50px', fontWeight: 700, border: '1px solid #ffc10744' }}>🌅 יומי</span>}
-                      <DueDateBadge dueDate={task.dueDate} />
+                  {/* Tasks */}
+                  {tasks.map(task => (
+                    <div key={task.id} style={{ background: '#fff', borderRadius: t.radius, boxShadow: t.shadow, border: t.cardBorder || 'none', padding: '10px 12px', marginBottom: '5px', borderRight: `3px solid ${g.color}` }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 700, fontSize: '13px' }}>{task.title}</span>
+                            {task.isDaily && <span style={{ fontSize: '9px', background: '#FFF3CD', color: '#856404', padding: '1px 5px', borderRadius: '50px', fontWeight: 700, border: '1px solid #ffc10744' }}>🌅 יומי</span>}
+                            <DueDateBadge dueDate={task.dueDate} />
+                          </div>
+                          {task.desc && <div style={{ fontSize: '11px', color: t.textLight, marginTop: 1 }}>{task.desc}</div>}
+                        </div>
+                        <div style={{ fontWeight: 800, fontSize: '13px', color: t.primary, flexShrink: 0 }}>₪{task.reward}</div>
+                      </div>
+                      {task.status === 'pending' && (
+                        <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                          <Btn t={t} color={t.secondary} full sm onClick={() => onApprove(kid.id, task.id)}>✅ אשר ותגמל</Btn>
+                          <Btn t={t} color={t.danger}    full sm onClick={() => onReject(kid.id, task.id)}>❌ דחה</Btn>
+                        </div>
+                      )}
                     </div>
-                    {task.desc && <div style={{ fontSize: '11px', color: t.textLight }}>{task.desc}</div>}
-                    <div style={{ fontSize: '11px', color: sm?.c, fontWeight: 700, marginTop: '1px' }}>{sm?.l}</div>
-                  </div>
-                  <div style={{ fontWeight: 800, fontSize: '13px', color: t.primary, flexShrink: 0 }}>₪{task.reward}</div>
+                  ))}
                 </div>
-                {task.status === 'pending' && (
-                  <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
-                    <Btn t={t} color={t.secondary} full sm onClick={() => onApprove(kid.id, task.id)}>✅ אשר</Btn>
-                    <Btn t={t} color={t.danger}    full sm onClick={() => onReject(kid.id, task.id)}>❌ דחה</Btn>
-                  </div>
-                )}
-              </div>
-            );
-          })
+              );
+            });
+          })()
         }
       </div>
     </div>

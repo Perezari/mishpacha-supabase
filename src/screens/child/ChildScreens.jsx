@@ -264,10 +264,15 @@ export function ChildDashboard({ t, kid, onCompleteTask, onNav }) {
 
   const pct   = Math.round(Math.min(100, (kid.earned / kid.goalAmount) * 100));
   const stars = Math.min(5, Math.floor(pct / 20));
-  const todoT = kid.tasks.filter(t => t.status === 'todo');
-  const pendT = kid.tasks.filter(t => t.status === 'pending');
-  const doneT = kid.tasks.filter(t => t.status === 'done');
-  const rejT  = kid.tasks.filter(t => t.status === 'rejected');
+  const pendT    = kid.tasks.filter(t => t.status === 'pending');
+  const doneT    = kid.tasks.filter(t => t.status === 'done');
+  const rejT     = kid.tasks.filter(t => t.status === 'rejected');
+  // Split todo into sub-groups
+  const todoAll  = kid.tasks.filter(t => t.status === 'todo');
+  const todoDaily  = todoAll.filter(t => t.isDaily);
+  const todoDue    = todoAll.filter(t => !t.isDaily && t.dueDate);
+  const todoRegular= todoAll.filter(t => !t.isDaily && !t.dueDate);
+  const todoT    = todoAll; // keep for stats
 
   const encourage = pct >= 95 ? '🎉 כמעט הגעת למטרה!'
     : pct >= 75 ? '🚀 כמעט שם! המשך!'
@@ -381,10 +386,41 @@ export function ChildDashboard({ t, kid, onCompleteTask, onNav }) {
           </div>
         )}
 
-        {todoT.length > 0 && <><Sec icon="📌" label="לביצוע" count={todoT.length} color="#7C4DFF" />{todoT.map(task => <TaskCard key={task.id} task={task} isCompleting={completingId === task.id} justDone={justDoneId === task.id} onComplete={() => handleComplete(task)} />)}</>}
-        {pendT.length > 0 && <><Sec icon="⏳" label="ממתין לאישור" count={pendT.length} color="#FF9800" />{pendT.map(task => <TaskCard key={task.id} task={task} />)}</>}
-        {doneT.length > 0 && <><Sec icon="✅" label="הושלמו" count={doneT.length} color="#00C853" />{doneT.map(task => <TaskCard key={task.id} task={task} />)}</>}
-        {rejT.length > 0  && <><Sec icon="❌" label="נדחו" count={rejT.length} color="#FF3D57" />{rejT.map(task => <TaskCard key={task.id} task={task} />)}</>}
+        {/* ── Pending approval ── */}
+        {pendT.length > 0 && <>
+          <Sec icon="⏳" label="ממתין לאישור הורה" count={pendT.length} color="#FF9800" />
+          {pendT.map(task => <TaskCard key={task.id} task={task} />)}
+        </>}
+
+        {/* ── Due date tasks (urgent) ── */}
+        {todoDue.length > 0 && <>
+          <Sec icon="📅" label="עם תאריך יעד" count={todoDue.length} color="#E65100" />
+          {todoDue.map(task => <TaskCard key={task.id} task={task} isCompleting={completingId === task.id} justDone={justDoneId === task.id} onComplete={() => handleComplete(task)} />)}
+        </>}
+
+        {/* ── Daily routine ── */}
+        {todoDaily.length > 0 && <>
+          <Sec icon="🌅" label="שגרה יומית" count={todoDaily.length} color={primary} />
+          {todoDaily.map(task => <TaskCard key={task.id} task={task} isCompleting={completingId === task.id} justDone={justDoneId === task.id} onComplete={() => handleComplete(task)} />)}
+        </>}
+
+        {/* ── Regular tasks ── */}
+        {todoRegular.length > 0 && <>
+          <Sec icon="📌" label="משימות" count={todoRegular.length} color="#5C6BC0" />
+          {todoRegular.map(task => <TaskCard key={task.id} task={task} isCompleting={completingId === task.id} justDone={justDoneId === task.id} onComplete={() => handleComplete(task)} />)}
+        </>}
+
+        {/* ── Completed ── */}
+        {doneT.length > 0 && <>
+          <Sec icon="✅" label="הושלמו היום" count={doneT.length} color="#00C853" />
+          {doneT.map(task => <TaskCard key={task.id} task={task} />)}
+        </>}
+
+        {/* ── Rejected ── */}
+        {rejT.length > 0 && <>
+          <Sec icon="❌" label="נדחו — נסה שוב" count={rejT.length} color="#FF3D57" />
+          {rejT.map(task => <TaskCard key={task.id} task={task} />)}
+        </>}
 
         {/* Badge quick-strip */}
         {doneT.length > 0 && (
