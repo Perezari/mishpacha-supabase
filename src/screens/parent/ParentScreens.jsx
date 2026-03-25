@@ -244,24 +244,38 @@ export function AddChildScreen({ t, onSave, onBack }) {
    ADD TASK
 ════════════════════════════════════════════════ */
 export function AddTaskScreen({ t, kids, preKidId, onSave, onBack }) {
-  const [title,  setTitle]  = useState('');
-  const [desc,   setDesc]   = useState('');
-  const [reward, setReward] = useState('');
-  const [kidId,  setKidId]  = useState(preKidId || kids[0]?.id || '');
-  const [appr,   setAppr]   = useState(true);
-  const [saved,  setSaved]  = useState(false);
-  const [err,    setErr]    = useState('');
+  const [title,    setTitle]    = useState('');
+  const [desc,     setDesc]     = useState('');
+  const [reward,   setReward]   = useState('');
+  const [kidId,    setKidId]    = useState(preKidId || kids[0]?.id || '');
+  const [appr,     setAppr]     = useState(true);
+  const [taskType, setTaskType] = useState('regular'); // 'regular' | 'daily' | 'onetime'
+  const [dueDate,  setDueDate]  = useState('');
+  const [saved,    setSaved]    = useState(false);
+  const [err,      setErr]      = useState('');
 
   const handle = async () => {
     setErr('');
     if (!title)  { setErr('נא להכניס שם למשימה'); return; }
     if (!reward) { setErr('נא להכניס סכום');       return; }
     if (!kidId)  { setErr('נא לבחור ילד/ה');       return; }
-    const result = await onSave({ title, desc, reward: parseFloat(reward), kidId, requiresApproval: appr });
+    if (taskType === 'onetime' && !dueDate) { setErr('נא לבחור תאריך יעד'); return; }
+    const result = await onSave({
+      title, desc, reward: parseFloat(reward), kidId,
+      requiresApproval: appr,
+      isDaily: taskType === 'daily',
+      dueDate: taskType === 'onetime' ? dueDate : null,
+    });
     if (result?.error) { setErr('שגיאה — נסה שוב'); return; }
     setSaved(true);
     setTimeout(() => { setSaved(false); onBack(); }, 1100);
   };
+
+  const TYPES = [
+    { id: 'regular', icon: '📌', label: 'רגילה',       sub: 'משימה חד פעמית' },
+    { id: 'daily',   icon: '🌅', label: 'יומית',        sub: 'מאופסת כל יום' },
+    { id: 'onetime', icon: '📅', label: 'עם תאריך יעד', sub: 'נעלמת אחרי' },
+  ];
 
   return (
     <div style={{ background: t.bgGrad, fontFamily: "'Heebo',sans-serif", color: t.text, minHeight: '100%' }}>
@@ -270,6 +284,38 @@ export function AddTaskScreen({ t, kids, preKidId, onSave, onBack }) {
       <div style={{ padding: '12px 14px' }}>
         <div style={{ background: '#fff', borderRadius: t.radius, boxShadow: t.shadow, padding: '16px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
+
+            {/* Task type selector */}
+            <div>
+              <Lbl t={t}>סוג משימה</Lbl>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {TYPES.map(tp => (
+                  <button key={tp.id} onClick={() => setTaskType(tp.id)} style={{
+                    flex: 1, padding: '8px 4px', borderRadius: t.inputRadius,
+                    border: taskType === tp.id ? `2px solid ${t.primary}` : `2px solid ${t.progressBg}`,
+                    background: taskType === tp.id ? `${t.primary}12` : t.progressBg,
+                    cursor: 'pointer', textAlign: 'center', transition: 'all .15s',
+                    fontFamily: "'Heebo',sans-serif",
+                  }}>
+                    <div style={{ fontSize: 18, fontFamily: EF }}>{tp.icon}</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: taskType === tp.id ? t.primary : t.text, marginTop: 2 }}>{tp.label}</div>
+                    <div style={{ fontSize: 9, color: t.textLight }}>{tp.sub}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Due date picker — only for one-time */}
+            {taskType === 'onetime' && (
+              <div>
+                <Lbl t={t}>📅 תאריך יעד</Lbl>
+                <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
+                  min={new Date().toISOString().slice(0,10)}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: t.inputRadius, border: t.cardBorder || '2px solid rgba(0,0,0,.08)', fontSize: '13px', color: t.text, background: t.inputBg, outline: 'none', fontFamily: "'Heebo',sans-serif", direction: 'ltr' }}
+                />
+              </div>
+            )}
+
             <Field t={t} label="שם המשימה 📝"><InputF t={t} placeholder="לדוגמה: צחצוח שיניים..." value={title} onChange={e => setTitle(e.target.value)} autoFocus /></Field>
             <Field t={t} label="תיאור (לא חובה)"><TextareaF t={t} placeholder="הסבר קצר..." value={desc} onChange={e => setDesc(e.target.value)} /></Field>
             <div>

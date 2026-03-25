@@ -278,7 +278,8 @@ export function useAppData() {
       const newStatus = task.requiresApproval ? 'pending' : 'done';
       setKids(ks => ks.map(k => k.id !== kid.id ? k : {
         ...k,
-        earned: newStatus === 'done' ? k.earned + task.reward : k.earned,
+        earned:      newStatus === 'done' ? k.earned      + task.reward : k.earned,
+        totalEarned: newStatus === 'done' ? k.totalEarned + task.reward : k.totalEarned,
         tasks:  k.tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t),
       }));
       const { error } = await db.completeTask(task, kid);
@@ -296,7 +297,8 @@ export function useAppData() {
 
       setKids(ks => ks.map(k => k.id !== kidId ? k : {
         ...k,
-        earned: k.earned + task.reward,
+        earned:      k.earned      + task.reward,
+        totalEarned: k.totalEarned + task.reward,
         streak: addStreak ? k.streak + 1 : k.streak,
         lastStreakDate: addStreak ? today : k.lastStreakDate,
         tasks:  k.tasks.map(t => t.id === taskId ? { ...t, status: 'done' } : t),

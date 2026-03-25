@@ -113,6 +113,18 @@ function TaskCard({ task, onComplete, isCompleting, justDone }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
             <span style={{ fontWeight: 800, fontSize: 14, color: '#1A0033', lineHeight: 1.2 }}>{task.title}</span>
             {task.isDaily && <span className="daily-badge">🌅 יומי</span>}
+            {task.dueDate && !task.isDaily && (() => {
+              const due  = new Date(task.dueDate);
+              const now  = new Date();
+              const days = Math.ceil((due - now) / 86400000);
+              const over = days < 0;
+              const soon = days >= 0 && days <= 2;
+              return (
+                <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 50, fontWeight: 700, border: '1px solid', background: over ? '#FFEBEE' : soon ? '#FFF8E1' : '#E8F5E9', color: over ? '#C62828' : soon ? '#E65100' : '#2E7D32', borderColor: over ? '#FFCDD2' : soon ? '#FFE0B2' : '#C8E6C9' }}>
+                  📅 {over ? `פג ${Math.abs(days)}d` : days === 0 ? 'היום!' : `${days}d`}
+                </span>
+              );
+            })()}
           </div>
           {task.desc && <div style={{ fontSize: 11, color: '#7B5EA7', marginTop: 2, lineHeight: 1.3 }}>{task.desc}</div>}
           <div style={{ fontSize: 11, fontWeight: 700, color: st.color, marginTop: 3 }}>{st.label}</div>
@@ -144,6 +156,79 @@ function TaskCard({ task, onComplete, isCompleting, justDone }) {
     </div>
   );
 }
+
+/* ── Level system ──────────────────────────────── */
+const LEVEL_THRESHOLDS = [0, 10, 25, 50, 100, 175, 275, 400, 560, 750, 1000];
+const LEVEL_NAMES = ['מתחיל','חוקר','חרוץ','מיומן','גיבור','אלוף','מאסטר','אגדה','על-אנושי','אלמותי'];
+const LEVEL_ICONS = ['🌱','🔍','⚡','🛡️','💪','🏆','🎯','🌟','🚀','👑'];
+function getLevel(te) { let l=1; for(let i=1;i<LEVEL_THRESHOLDS.length;i++){if(te>=LEVEL_THRESHOLDS[i])l=i+1;else break;} return Math.min(l,10); }
+function getLevelPct(te) { const l=getLevel(te); if(l>=10)return 100; const f=LEVEL_THRESHOLDS[l-1],t=LEVEL_THRESHOLDS[l]; return Math.round(((te-f)/(t-f))*100); }
+function getNextCoins(te) { const l=getLevel(te); return l>=10?0:LEVEL_THRESHOLDS[l]-te; }
+
+function getWeeklyEarnings(tasks,weeks=6){
+  const now=new Date(),result=[];
+  for(let w=weeks-1;w>=0;w--){
+    const s=new Date(now); s.setDate(s.getDate()-(w+1)*7);
+    const e=new Date(now); e.setDate(e.getDate()-w*7);
+    const label=w===0?'השבוע':w===1?'שבוע שעבר':`לפני ${w}`;
+    const sum=tasks.filter(t=>t.status==='done'&&t.createdAt).filter(t=>{const d=new Date(t.createdAt);return d>=s&&d<e;}).reduce((s,t)=>s+t.reward,0);
+    result.push({label,sum});
+  }
+  return result;
+}
+
+function EarningsChart({tasks,primary}){
+  const weeks=getWeeklyEarnings(tasks,6);
+  const maxVal=Math.max(...weeks.map(w=>w.sum),1);
+  return (
+    <div style={{background:'#fff',borderRadius:18,padding:'12px 14px',boxShadow:'0 3px 12px rgba(0,0,0,.07)',marginBottom:8}}>
+      <div style={{fontWeight:800,fontSize:12,color:primary,marginBottom:10,display:'flex',alignItems:'center',gap:5}}>
+        <span style={{fontFamily:EF}}>📊</span> היסטוריית הרווחים
+      </div>
+      <div style={{display:'flex',alignItems:'flex-end',gap:5,height:64}}>
+        {weeks.map((w,i)=>{
+          const pct=w.sum/maxVal; const isLast=i===weeks.length-1;
+          return (
+            <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+              <div style={{fontSize:9,fontWeight:700,color:isLast?primary:'#aaa',height:11,lineHeight:'11px',whiteSpace:'nowrap'}}>
+                {w.sum>0?`₪${w.sum}`:''}
+              </div>
+              <div style={{width:'100%',borderRadius:'4px 4px 0 0',height:`${Math.max(pct*44,w.sum>0?3:2)}px`,background:isLast?`linear-gradient(180deg,${primary},${primary}77)`:`${primary}28`,transition:'height .5s',minHeight:2}}/>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{display:'flex',gap:5,marginTop:3}}>
+        {weeks.map((w,i)=>(
+          <div key={i} style={{flex:1,textAlign:'center',fontSize:8,color:i===weeks.length-1?primary:'#bbb',fontWeight:i===weeks.length-1?800:500,overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis'}}>{w.label}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LevelBadge({totalEarned,primary,barGrad}){
+  const lvl=getLevel(totalEarned),pct=getLevelPct(totalEarned),next=getNextCoins(totalEarned);
+  return (
+    <div style={{background:'#fff',borderRadius:18,padding:'11px 14px',boxShadow:'0 3px 12px rgba(0,0,0,.07)',marginBottom:8}}>
+      <div style={{display:'flex',alignItems:'center',gap:10}}>
+        <div style={{width:38,height:38,borderRadius:'50%',background:`linear-gradient(135deg,${primary},${primary}77)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,fontFamily:EF,flexShrink:0,boxShadow:`0 3px 10px ${primary}44`}}>
+          {LEVEL_ICONS[lvl-1]}
+        </div>
+        <div style={{flex:1}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
+            <div style={{fontWeight:900,fontSize:12,color:'#1A0033'}}>רמה {lvl} — {LEVEL_NAMES[lvl-1]}</div>
+            {lvl<10?<div style={{fontSize:9,color:'#aaa'}}>עוד ₪{next}</div>:<div style={{fontSize:10,color:primary,fontWeight:800}}>👑 מקסימלי!</div>}
+          </div>
+          <div style={{height:6,borderRadius:50,background:`${primary}18`,overflow:'hidden'}}>
+            <div style={{height:'100%',borderRadius:50,background:barGrad,width:`${pct}%`,transition:'width .8s'}}/>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 /* ════════════════════════════════════════════════════
    CHILD DASHBOARD
@@ -191,8 +276,9 @@ export function ChildDashboard({ t, kid, onCompleteTask, onNav }) {
     : `!שלום ${kid.name} 👋 בוא נתחיל`;
 
   // Derive gradient from t, fallback to violet→teal
-  const barGrad = t.progressGrad || 'linear-gradient(90deg,#7C4DFF,#00BCD4)';
-  const primary = t.primary || '#7C4DFF';
+  const barGrad     = t.progressGrad || 'linear-gradient(90deg,#7C4DFF,#00BCD4)';
+  const primary     = t.primary || '#7C4DFF';
+  const totalEarned = kid.totalEarned ?? kid.earned;
 
   const Sec = ({ icon, label, count, color }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 14, marginBottom: 8 }}>
@@ -283,6 +369,10 @@ export function ChildDashboard({ t, kid, onCompleteTask, onNav }) {
         </div>
 
         {/* Empty state */}
+        {/* Level + Chart */}
+        <LevelBadge totalEarned={totalEarned} primary={primary} barGrad={barGrad} />
+        <EarningsChart tasks={kid.tasks} primary={primary} />
+
         {kid.tasks.length === 0 && (
           <div style={{ textAlign: 'center', padding: '36px 20px' }}>
             <span style={{ fontSize: 52, fontFamily: EF, display: 'block', marginBottom: 10 }}>🎮</span>
@@ -350,8 +440,9 @@ export function BadgesScreen({ t, kid }) {
   const pct    = Math.round(Math.min(100, (kid.earned / kid.goalAmount) * 100));
   const badges = ALL_BADGES(done, pct, kid.streak, kid.earned);
   const earned = badges.filter(b => b.earned).length;
-  const primary = t.primary || '#7C4DFF';
-  const barGrad = t.progressGrad || 'linear-gradient(90deg,#7C4DFF,#00BCD4)';
+  const primary     = t.primary || '#7C4DFF';
+  const barGrad     = t.progressGrad || 'linear-gradient(90deg,#7C4DFF,#00BCD4)';
+  const totalEarned = kid.totalEarned ?? kid.earned;
 
   return (
     <div style={{ background: t.bgGrad, minHeight: '100%', fontFamily: "'Heebo',sans-serif", display: 'flex', flexDirection: 'column' }}>

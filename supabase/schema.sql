@@ -1,116 +1,80 @@
--- ═══════════════════════════════════════════════════════
---  משפחה במשימה — Supabase Schema
---  Run this in: Supabase Dashboard → SQL Editor → New query
--- ═══════════════════════════════════════════════════════
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
 
--- ── 1. profiles (extends auth.users) ────────────────────
-create table if not exists public.profiles (
-  id         uuid primary key references auth.users(id) on delete cascade,
-  role       text not null default 'parent',   -- 'parent' | 'child'
-  theme_id   text not null default 'C',
-  family_id  uuid,                              -- set after family is created
-  created_at timestamptz default now()
+CREATE TABLE public.families (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL DEFAULT 'המשפחה שלי'::text,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT families_pkey PRIMARY KEY (id),
+  CONSTRAINT families_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id)
 );
-
--- ── 2. families ──────────────────────────────────────────
-create table if not exists public.families (
-  id         uuid primary key default gen_random_uuid(),
-  name       text not null default 'המשפחה שלי',
-  created_by uuid references public.profiles(id),
-  created_at timestamptz default now()
+CREATE TABLE public.kids (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  family_id uuid NOT NULL,
+  name text NOT NULL,
+  age integer NOT NULL DEFAULT 8,
+  avatar text NOT NULL DEFAULT '🐱'::text,
+  goal_name text NOT NULL DEFAULT 'המטרה שלי'::text,
+  goal_icon text NOT NULL DEFAULT '🎯'::text,
+  goal_amount numeric NOT NULL DEFAULT 100,
+  earned numeric NOT NULL DEFAULT 0,
+  theme_id text NOT NULL DEFAULT 'A'::text,
+  streak integer NOT NULL DEFAULT 0,
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  last_streak_date date,
+  CONSTRAINT kids_pkey PRIMARY KEY (id),
+  CONSTRAINT kids_family_id_fkey FOREIGN KEY (family_id) REFERENCES public.families(id)
 );
-
--- back-fill family_id on profiles
-alter table public.profiles
-  add constraint fk_family
-  foreign key (family_id) references public.families(id);
-
--- ── 3. kids ──────────────────────────────────────────────
-create table if not exists public.kids (
-  id           uuid primary key default gen_random_uuid(),
-  family_id    uuid not null references public.families(id) on delete cascade,
-  name         text not null,
-  age          int  not null default 8,
-  avatar       text not null default '🐱',
-  goal_name    text not null default 'המטרה שלי',
-  goal_icon    text not null default '🎯',
-  goal_amount  numeric(10,2) not null default 100,
-  earned       numeric(10,2) not null default 0,
-  theme_id     text not null default 'A',
-  streak       int  not null default 0,
-  sort_order   int  not null default 0,
-  created_at   timestamptz default now()
+CREATE TABLE public.profiles (
+  id uuid NOT NULL,
+  role text NOT NULL DEFAULT 'parent'::text,
+  theme_id text NOT NULL DEFAULT 'C'::text,
+  family_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id),
+  CONSTRAINT fk_family FOREIGN KEY (family_id) REFERENCES public.families(id)
 );
-
--- ── 4. tasks ─────────────────────────────────────────────
-create table if not exists public.tasks (
-  id               uuid primary key default gen_random_uuid(),
-  kid_id           uuid not null references public.kids(id) on delete cascade,
-  family_id        uuid not null references public.families(id) on delete cascade,
-  title            text not null,
-  description      text,
-  reward           numeric(10,2) not null default 1,
-  status           text not null default 'todo',  -- todo | pending | done | rejected
-  requires_approval boolean not null default true,
-  created_at       timestamptz default now(),
-  completed_at     timestamptz
+CREATE TABLE public.purchases (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  kid_id uuid NOT NULL,
+  family_id uuid NOT NULL,
+  item_name text NOT NULL,
+  item_icon text NOT NULL,
+  item_price numeric NOT NULL,
+  status text NOT NULL DEFAULT 'pending'::text,
+  created_at timestamp with time zone DEFAULT now(),
+  approved_at timestamp with time zone,
+  CONSTRAINT purchases_pkey PRIMARY KEY (id),
+  CONSTRAINT purchases_kid_id_fkey FOREIGN KEY (kid_id) REFERENCES public.kids(id),
+  CONSTRAINT purchases_family_id_fkey FOREIGN KEY (family_id) REFERENCES public.families(id)
 );
-
--- ── 5. Row Level Security ─────────────────────────────────
-
-alter table public.profiles enable row level security;
-alter table public.families  enable row level security;
-alter table public.kids      enable row level security;
-alter table public.tasks     enable row level security;
-
--- profiles: users can only see/edit their own
-create policy "profiles: own"
-  on public.profiles for all
-  using  (auth.uid() = id)
-  with check (auth.uid() = id);
-
--- families: members of same family
-create policy "families: own family"
-  on public.families for all
-  using (
-    id in (
-      select family_id from public.profiles where id = auth.uid()
-    )
-  );
-
--- kids: same family
-create policy "kids: same family"
-  on public.kids for all
-  using (
-    family_id in (
-      select family_id from public.profiles where id = auth.uid()
-    )
-  );
-
--- tasks: same family
-create policy "tasks: same family"
-  on public.tasks for all
-  using (
-    family_id in (
-      select family_id from public.profiles where id = auth.uid()
-    )
-  );
-
--- ── 6. Helper function: auto-create profile on signup ────
-create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer as $$
-begin
-  insert into public.profiles (id, role, theme_id)
-  values (new.id, 'parent', 'C');
-  return new;
-end;
-$$;
-
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
-
--- ── 7. Realtime (optional — for live approvals) ──────────
-alter publication supabase_realtime add table public.tasks;
-alter publication supabase_realtime add table public.kids;
+CREATE TABLE public.shop_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  family_id uuid NOT NULL,
+  name text NOT NULL,
+  icon text NOT NULL,
+  price numeric NOT NULL,
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT shop_items_pkey PRIMARY KEY (id),
+  CONSTRAINT shop_items_family_id_fkey FOREIGN KEY (family_id) REFERENCES public.families(id)
+);
+CREATE TABLE public.tasks (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  kid_id uuid NOT NULL,
+  family_id uuid NOT NULL,
+  title text NOT NULL,
+  description text,
+  reward numeric NOT NULL DEFAULT 1,
+  status text NOT NULL DEFAULT 'todo'::text,
+  requires_approval boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  completed_at timestamp with time zone,
+  is_daily boolean NOT NULL DEFAULT false,
+  CONSTRAINT tasks_pkey PRIMARY KEY (id),
+  CONSTRAINT tasks_kid_id_fkey FOREIGN KEY (kid_id) REFERENCES public.kids(id),
+  CONSTRAINT tasks_family_id_fkey FOREIGN KEY (family_id) REFERENCES public.families(id)
+);

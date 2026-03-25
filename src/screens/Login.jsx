@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import THEMES from '../themes.js';
 import { Btn, Card, InputF, Lbl } from '../components/Atoms.jsx';
 import * as db from '../lib/db.js';
@@ -35,6 +35,20 @@ export default function LoginScreen({ onParentLogin, onParentSignUp, onChildLogi
   const [kidList,    setKidList]    = useState([]);
   const [pickedKid,  setPickedKid]  = useState(null);
   const [kidLoading, setKidLoading] = useState(false);
+  const autoSubmitRef = useRef(false);
+
+  // Face ID / autofill detection — auto-submit when both fields fill instantly
+  useEffect(() => {
+    if (parentMode !== 'login') return;
+    if (!email || !pass) { autoSubmitRef.current = false; return; }
+    // If both fields filled and we haven't auto-submitted yet → trigger
+    if (!autoSubmitRef.current && email.includes('@') && pass.length >= 6) {
+      autoSubmitRef.current = true;
+      // Small delay so state settles
+      const t = setTimeout(() => { handleParentSubmit(); }, 120);
+      return () => clearTimeout(t);
+    }
+  }, [email, pass, parentMode]);
 
   const tr = (msg = '') => {
     if (msg.includes('Invalid login'))       return '❌ אימייל או סיסמה שגויים';
@@ -226,12 +240,12 @@ export default function LoginScreen({ onParentLogin, onParentSignUp, onChildLogi
               <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
                 <div>
                   <Lbl t={t}>אימייל 📧</Lbl>
-                  <InputF t={t} placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+                  <InputF t={t} placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" />
                 </div>
                 <div>
                   <Lbl t={t}>סיסמה 🔐</Lbl>
                   <div style={{ position: 'relative' }}>
-                    <InputF t={t} type={showPass ? 'text' : 'password'} placeholder="לפחות 6 תווים" value={pass} onChange={e => setPass(e.target.value)} />
+                    <InputF t={t} type={showPass ? 'text' : 'password'} placeholder="לפחות 6 תווים" value={pass} onChange={e => setPass(e.target.value)} autoComplete="current-password" />
                     <span onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', fontSize: '16px', userSelect: 'none', fontFamily: EF }}>
                       {showPass ? '🙈' : '👁️'}
                     </span>
@@ -297,7 +311,7 @@ export default function LoginScreen({ onParentLogin, onParentSignUp, onChildLogi
                   <input
                     placeholder="הכנס את הקוד..."
                     value={familyCode}
-                    onChange={e => setFamilyCode(e.target.value)}
+                    onChange={e => setFamilyCode(e.target.value.replace(/\s/g, ''))}
                     onKeyDown={e => e.key === 'Enter' && handleFamilyCodeSubmit()}
                     style={{
                       width: '100%', padding: '12px 16px',

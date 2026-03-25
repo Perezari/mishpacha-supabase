@@ -48,6 +48,7 @@ export const updateKid = (kidId, updates) => {
   if (updates.earned     !== undefined) map.earned      = updates.earned;
   if (updates.streak          !== undefined) map.streak           = updates.streak;
   if (updates.lastStreakDate  !== undefined) map.last_streak_date = updates.lastStreakDate;
+  if (updates.totalEarned    !== undefined) map.total_earned     = updates.totalEarned;
   if (updates.name       !== undefined) map.name        = updates.name;
   if (updates.age        !== undefined) map.age         = updates.age;
   if (updates.avatar     !== undefined) map.avatar      = updates.avatar;
@@ -75,7 +76,7 @@ export const createTask = (familyId, task) =>
     family_id: familyId, kid_id: task.kidId,
     title: task.title, description: task.desc || null,
     reward: task.reward, requires_approval: task.requiresApproval,
-    is_daily: task.isDaily ?? false, status: 'todo',
+    is_daily: task.isDaily ?? false, due_date: task.dueDate || null, status: 'todo',
   }).select().single();
 // Uses security-definer RPC so children (no auth) can also update their own tasks
 export const updateTaskStatus = async (taskId, status, kidId) => {
@@ -91,13 +92,19 @@ export const completeTask = async (task, kid) => {
   if (task.requiresApproval) return updateTaskStatus(task.id, 'pending', kid.id);
   const [tr, kr] = await Promise.all([
     updateTaskStatus(task.id, 'done', kid.id),
-    updateKid(kid.id, { earned: Number(kid.earned) + Number(task.reward) }),
+    updateKid(kid.id, {
+      earned:      Number(kid.earned)      + Number(task.reward),
+      totalEarned: Number(kid.totalEarned) + Number(task.reward),
+    }),
   ]);
   return tr.error ? tr : kr.error ? kr : { data: { task: tr.data, kid: kr.data }, error: null };
 };
 export const approveTask = async (task, kid, addStreak = false) => {
   const today = new Date().toISOString().slice(0, 10);
-  const kidUpdates = { earned: Number(kid.earned) + Number(task.reward) };
+  const kidUpdates = {
+    earned:      Number(kid.earned)      + Number(task.reward),
+    totalEarned: Number(kid.totalEarned) + Number(task.reward),
+  };
   if (addStreak) {
     kidUpdates.streak = kid.streak + 1;
     kidUpdates.lastStreakDate = today;
@@ -168,6 +175,7 @@ export const normalizeKid = (row) => ({
   goalAmount: Number(row.goal_amount), earned: Number(row.earned),
   themeId: row.theme_id, streak: row.streak,
   lastStreakDate: row.last_streak_date || null,
+  totalEarned: Number(row.total_earned || row.earned || 0),
   tasks: [],
 });
 export const normalizeTask = (row) => ({
@@ -175,6 +183,7 @@ export const normalizeTask = (row) => ({
   title: row.title, desc: row.description,
   reward: Number(row.reward), status: row.status,
   requiresApproval: row.requires_approval, isDaily: !!row.is_daily,
+  dueDate: row.due_date || null,
   createdAt: row.created_at,
 });
 export const normalizeShopItem = (row) => ({
