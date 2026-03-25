@@ -27,14 +27,83 @@ const DueDateBadge = ({ dueDate }) => {
   );
 };
 
+/* ── Approve With Message Modal ─────────────────────────
+   Shows before approving — lets parent write a message
+────────────────────────────────────────────────────── */
+const QUICK_MESSAGES = [
+  'כל הכבוד! 🌟', 'עבודה מצוינת! 💪', 'אני גאה בך! ❤️',
+  'המשך כך! 🚀',  'סופר! ⭐',          'מדהים! 🎉',
+];
+
+function ApproveWithMessageModal({ t, task, kid, onConfirm, onCancel }) {
+  const [msg, setMsg] = useState('');
+  if (!task || !kid) return null;
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div className="anim-pop" style={{ background: '#fff', borderRadius: t.radius, padding: '20px', maxWidth: 340, width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,.22)' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <div style={{ fontSize: 32, fontFamily: EF }}>{kid.avatar}</div>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: 14, color: t.text }}>{kid.name}</div>
+            <div style={{ fontSize: 12, color: t.textLight }}>{task.title} · ₪{task.reward}</div>
+          </div>
+        </div>
+
+        {/* Message input */}
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: t.textMid, marginBottom: 6 }}>
+            💬 כתוב/י מסר לילד/ה (לא חובה):
+          </div>
+          <input
+            value={msg}
+            onChange={e => setMsg(e.target.value)}
+            placeholder="לדוגמה: כל הכבוד, המשך כך!"
+            maxLength={80}
+            style={{ width: '100%', padding: '9px 12px', borderRadius: t.inputRadius, border: `2px solid ${t.progressBg}`, fontSize: 13, fontFamily: "'Heebo',sans-serif", outline: 'none', direction: 'rtl', color: t.text, background: t.inputBg }}
+          />
+        </div>
+
+        {/* Quick picks */}
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 14 }}>
+          {QUICK_MESSAGES.map(q => (
+            <button key={q} onClick={() => setMsg(q)} style={{
+              padding: '4px 9px', borderRadius: 50, border: `1.5px solid ${msg === q ? t.primary : t.progressBg}`,
+              background: msg === q ? `${t.primary}18` : t.progressBg,
+              color: msg === q ? t.primary : t.textMid,
+              fontFamily: "'Heebo',sans-serif", fontSize: 10, fontWeight: 700, cursor: 'pointer',
+            }}>{q}</button>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onCancel} style={{ flex: 1, padding: '10px', background: t.progressBg, color: t.text, border: 'none', borderRadius: t.btnRadius, fontFamily: "'Heebo',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+            ביטול
+          </button>
+          <button onClick={() => onConfirm(msg.trim() || null)} style={{ flex: 2, padding: '10px', background: t.secondary, color: '#fff', border: 'none', borderRadius: t.btnRadius, fontFamily: "'Heebo',sans-serif", fontSize: 13, fontWeight: 800, cursor: 'pointer', boxShadow: `0 4px 14px ${t.secondary}44` }}>
+            ✅ אשר ותגמל
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ════════════════════════════════════════════════
    KID DETAIL
 ════════════════════════════════════════════════ */
 export function KidDetailScreen({ t, kid, onBack, onAddTask, onApprove, onReject, onEdit, onDelete }) {
+  const [approveTarget, setApproveTarget] = useState(null); // task to approve
   if (!kid) return null;
   const pct = Math.round((kid.earned / kid.goalAmount) * 100);
   return (
     <div style={{ background: t.bgGrad, fontFamily: "'Heebo',sans-serif", color: t.text, minHeight: '100%' }}>
+      {approveTarget && (
+        <ApproveWithMessageModal t={t} task={approveTarget} kid={kid}
+          onConfirm={msg => { onApprove(kid.id, approveTarget.id, msg); setApproveTarget(null); }}
+          onCancel={() => setApproveTarget(null)}
+        />
+      )}
       <Header t={t} back="חזרה" onBack={onBack}
         title={<span><span style={{ fontFamily: EF }}>{kid.avatar}</span> {kid.name}</span>}
         subtitle={`גיל ${kid.age} · 🔥 ${kid.streak} ימי סטריק`}
@@ -108,7 +177,7 @@ export function KidDetailScreen({ t, kid, onBack, onAddTask, onApprove, onReject
                       </div>
                       {task.status === 'pending' && (
                         <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
-                          <Btn t={t} color={t.secondary} full sm onClick={() => onApprove(kid.id, task.id)}>✅ אשר ותגמל</Btn>
+                          <Btn t={t} color={t.secondary} full sm onClick={() => setApproveTarget(task)}>✅ אשר ותגמל</Btn>
                           <Btn t={t} color={t.danger}    full sm onClick={() => onReject(kid.id, task.id)}>❌ דחה</Btn>
                         </div>
                       )}
@@ -571,16 +640,23 @@ function ApprovalCelebration({ t, data }) {
    APPROVALS
 ════════════════════════════════════════════════ */
 export function ApprovalsScreen({ t, kids, onApprove, onReject, purchases = [], onApprovePurchase, onRejectPurchase }) {
-  const [celebData, setCelebData] = useState(null); // { kidName, taskTitle, reward, avatar }
+  const [celebData,     setCelebData]     = useState(null);
+  const [approveTarget, setApproveTarget] = useState(null); // { task, kid }
   const [tab, setTab] = useState('tasks');
   const pending = kids.flatMap(k => k.tasks.filter(x => x.status === 'pending').map(x => ({ ...x, kid: k })));
   const pendingPurchases = purchases.filter(p => p.status === 'pending');
   const STICKERS = ['🌟','🎉','🏆','💪','🎈','🥳'];
 
-  const handleApprove = (ki, ti) => {
+  const handleApproveClick = (ki, ti) => {
     const kid  = kids.find(k => k.id === ki);
     const task = kid?.tasks.find(t => t.id === ti);
-    onApprove(ki, ti);
+    setApproveTarget({ task, kid });
+  };
+
+  const handleApproveConfirm = (msg) => {
+    const { task, kid } = approveTarget;
+    onApprove(kid.id, task.id, msg);
+    setApproveTarget(null);
     setCelebData({ kidName: kid?.name, taskTitle: task?.title, reward: task?.reward, avatar: kid?.avatar });
     setTimeout(() => setCelebData(null), 2400);
   };
@@ -588,6 +664,12 @@ export function ApprovalsScreen({ t, kids, onApprove, onReject, purchases = [], 
   return (
     <div style={{ background: t.bgGrad, fontFamily: "'Heebo',sans-serif", color: t.text, minHeight: '100%' }}>
       {celebData && <ApprovalCelebration t={t} data={celebData} />}
+      {approveTarget && (
+        <ApproveWithMessageModal t={t} task={approveTarget.task} kid={approveTarget.kid}
+          onConfirm={handleApproveConfirm}
+          onCancel={() => setApproveTarget(null)}
+        />
+      )}
       <Header t={t} title="אישורים ממתינים" subtitle={`${pending.length + pendingPurchases.length} בקשות מחכות לך`}
         right={<div style={{ background: 'rgba(255,255,255,.25)', borderRadius: '50%', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '15px', border: '2px solid rgba(255,255,255,.4)' }}>{pending.length + pendingPurchases.length}</div>}
       />
@@ -630,7 +712,7 @@ export function ApprovalsScreen({ t, kids, onApprove, onReject, purchases = [], 
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '7px' }}>
-                  <Btn t={t} color={t.secondary} full sm onClick={() => handleApprove(item.kid.id, item.id)}>✅ אשר ותגמל</Btn>
+                  <Btn t={t} color={t.secondary} full sm onClick={() => handleApproveClick(item.kid.id, item.id)}>✅ אשר ותגמל</Btn>
                   <Btn t={t} color={t.danger}    full sm onClick={() => onReject(item.kid.id, item.id)}>❌ דחה</Btn>
                 </div>
               </div>

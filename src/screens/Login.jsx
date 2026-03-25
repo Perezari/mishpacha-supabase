@@ -37,18 +37,26 @@ export default function LoginScreen({ onParentLogin, onParentSignUp, onChildLogi
   const [kidLoading, setKidLoading] = useState(false);
   const autoSubmitRef = useRef(false);
 
-  // Face ID / autofill detection — auto-submit when both fields fill instantly
-  useEffect(() => {
+  // Face ID / autofill detection
+  // Called from onChange with the LATEST value (not stale state)
+  const handleAutoSubmit = (newEmail, newPass) => {
     if (parentMode !== 'login') return;
-    if (!email || !pass) { autoSubmitRef.current = false; return; }
-    // If both fields filled and we haven't auto-submitted yet → trigger
-    if (!autoSubmitRef.current && email.includes('@') && pass.length >= 6) {
-      autoSubmitRef.current = true;
-      // Small delay so state settles
-      const t = setTimeout(() => { handleParentSubmit(); }, 120);
-      return () => clearTimeout(t);
-    }
-  }, [email, pass, parentMode]);
+    // Use the freshest value from the event + fallback to current state
+    const e = (newEmail !== null ? newEmail : email).trim();
+    const p = (newPass  !== null ? newPass  : pass).trim();
+    if (!e || !p || !e.includes('@') || p.length < 6) return;
+    if (autoSubmitRef.current) return;
+    autoSubmitRef.current = true;
+    setTimeout(async () => {
+      autoSubmitRef.current = false;
+      // Call login directly with the known values — don't rely on stale state
+      setLoading(true);
+      try {
+        const { error } = await onParentLogin(e, p);
+        if (error) setErr(tr(error.message));
+      } finally { setLoading(false); }
+    }, 350);
+  };
 
   const tr = (msg = '') => {
     if (msg.includes('Invalid login'))       return '❌ אימייל או סיסמה שגויים';
@@ -240,12 +248,12 @@ export default function LoginScreen({ onParentLogin, onParentSignUp, onChildLogi
               <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
                 <div>
                   <Lbl t={t}>אימייל 📧</Lbl>
-                  <InputF t={t} placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" />
+                  <InputF t={t} placeholder="your@email.com" value={email} onChange={e => { setEmail(e.target.value); handleAutoSubmit(e.target.value, null); }} autoComplete="username email" />
                 </div>
                 <div>
                   <Lbl t={t}>סיסמה 🔐</Lbl>
                   <div style={{ position: 'relative' }}>
-                    <InputF t={t} type={showPass ? 'text' : 'password'} placeholder="לפחות 6 תווים" value={pass} onChange={e => setPass(e.target.value)} autoComplete="current-password" />
+                    <InputF t={t} type={showPass ? 'text' : 'password'} placeholder="לפחות 6 תווים" value={pass} onChange={e => { setPass(e.target.value); handleAutoSubmit(null, e.target.value); }} autoComplete="current-password" />
                     <span onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', fontSize: '16px', userSelect: 'none', fontFamily: EF }}>
                       {showPass ? '🙈' : '👁️'}
                     </span>
@@ -311,7 +319,7 @@ export default function LoginScreen({ onParentLogin, onParentSignUp, onChildLogi
                   <input
                     placeholder="הכנס את הקוד..."
                     value={familyCode}
-                    onChange={e => setFamilyCode(e.target.value.replace(/\s/g, ''))}
+                    onChange={e => setFamilyCode(e.target.value.replace(/[^a-f0-9\-]/gi, ''))}
                     onKeyDown={e => e.key === 'Enter' && handleFamilyCodeSubmit()}
                     style={{
                       width: '100%', padding: '12px 16px',

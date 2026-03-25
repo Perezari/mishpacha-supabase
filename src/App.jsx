@@ -171,12 +171,12 @@ export default function App() {
     if (role === 'parent') {
       switch (screen) {
         case 'dashboard':  return <ParentDashboard t={t} kids={kids} onNav={nav} onKidSelect={id => setSelKid(id)} pendingPurchases={pendingPurchaseCount} onApprove={(ki,ti) => actions.approveTask(ki,ti)} onReject={(ki,ti) => actions.rejectTask(ki,ti)} />;
-        case 'kidDetail':  return <KidDetailScreen t={t} kid={activeKid} onBack={() => nav('dashboard')} onAddTask={() => nav('addTask')} onApprove={(ki,ti) => actions.approveTask(ki,ti)} onReject={(ki,ti) => actions.rejectTask(ki,ti)} onEdit={() => nav('editChild')} onDelete={() => setShowDelete(true)} />;
+        case 'kidDetail':  return <KidDetailScreen t={t} kid={activeKid} onBack={() => nav('dashboard')} onAddTask={() => nav('addTask')} onApprove={(ki,ti,msg) => actions.approveTask(ki,ti,msg)} onReject={(ki,ti) => actions.rejectTask(ki,ti)} onEdit={() => nav('editChild')} onDelete={() => setShowDelete(true)} />;
         case 'editChild':   return <EditChildScreen t={t} kid={activeKid} onBack={() => nav('kidDetail')} onSave={async (updates) => { await actions.updateKidProfile(selKid, updates); }} />;
         case 'addChild':   return <AddChildScreen t={t} onSave={async d => { await actions.addKid(d); nav('dashboard'); }} onBack={() => nav('dashboard')} />;
         case 'addTask':    return <AddTaskScreen t={t} kids={kids} preKidId={selKid} onSave={d => actions.addTask(d)} onBack={() => nav(selKid ? 'kidDetail' : 'dashboard')} />;
         case 'goals':      return <GoalSettingScreen t={t} kids={kids} onSave={({ kidId, goalName, goalIcon, goalAmount }) => actions.setGoal(kidId, { goalName, goalIcon, goalAmount })} onBack={() => nav('dashboard')} />;
-        case 'approvals':  return <ApprovalsScreen t={t} kids={kids} onApprove={(ki,ti) => actions.approveTask(ki,ti)} onReject={(ki,ti) => actions.rejectTask(ki,ti)} purchases={purchases} onApprovePurchase={actions.approvePurchase} onRejectPurchase={actions.rejectPurchase} />;
+        case 'approvals':  return <ApprovalsScreen t={t} kids={kids} onApprove={(ki,ti,msg) => actions.approveTask(ki,ti,msg)} onReject={(ki,ti) => actions.rejectTask(ki,ti)} purchases={purchases} onApprovePurchase={actions.approvePurchase} onRejectPurchase={actions.rejectPurchase} />;
         case 'manageShop': return <ManageShopScreen t={t} shopItems={shopItems} onAdd={actions.addShopItem} onDelete={actions.deleteShopItem} onBack={() => nav('dashboard')} />;
         case 'settings':   return <SettingsScreen t={t} user={{ role: 'parent', userId: profile?.id }} family={family} kids={kids} onThemeChange={actions.changeTheme} onLogout={actions.signOut} onUpdateFamilyName={actions.updateFamilyName} onJoinFamily={actions.joinFamily} />;
         default:           return <ParentDashboard t={t} kids={kids} onNav={nav} onKidSelect={id => setSelKid(id)} />;

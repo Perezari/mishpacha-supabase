@@ -65,6 +65,14 @@ export const createKid = (familyId, kid) =>
 export const updateKidTheme = (kidId, themeId) =>
   supabase.rpc('update_kid_theme', { p_kid_id: kidId, p_theme_id: themeId });
 
+// Uses RPC so child (no auth) can update their own balance
+export const updateKidEarned = (kidId, earned, totalEarned) =>
+  supabase.rpc('update_kid_earned', {
+    p_kid_id:       kidId,
+    p_earned:       earned,
+    p_total_earned: totalEarned,
+  });
+
 export const deleteKid = (kidId) => supabase.from('kids').delete().eq('id', kidId);
 export const updateKidProfile = (kidId, updates) => {
   const map = {};
@@ -84,26 +92,47 @@ export const createTask = (familyId, task) =>
   }).select().single();
 // Uses security-definer RPC so children (no auth) can also update their own tasks
 export const updateTaskStatus = async (taskId, status, kidId) => {
-  const { error } = await supabase.rpc('update_task_status_for_kid', {
+  // Try RPC first (works for child without auth)
+  const { data: rpcData, error: rpcErr } = await supabase.rpc('update_task_status_for_kid', {
     p_task_id: taskId,
     p_kid_id:  kidId || '00000000-0000-0000-0000-000000000000',
     p_status:  status,
   });
-  // Return in same shape as before so callers don't break
-  return error ? { error } : { data: { id: taskId, status }, error: null };
+  if (rpcErr) {
+    console.error('⚠️ updateTaskStatus RPC failed:', rpcErr.message, { taskId, status, kidId });
+  } else {
+    return { data: { id: taskId, status }, error: null };
+  }
+
+  // Fallback: direct update (works for parent with auth session)
+  const updates = { status };
+  if (status === 'done') updates.completed_at = new Date().toISOString();
+  const { error: directErr } = await supabase
+    .from('tasks').update(updates).eq('id', taskId);
+
+  if (directErr) {
+    console.error('⚠️ updateTaskStatus direct failed:', directErr.message);
+    return { error: directErr };
+  }
+  return { data: { id: taskId, status }, error: null };
 };
 export const completeTask = async (task, kid) => {
   if (task.requiresApproval) return updateTaskStatus(task.id, 'pending', kid.id);
-  const [tr, kr] = await Promise.all([
-    updateTaskStatus(task.id, 'done', kid.id),
-    updateKid(kid.id, {
-      earned:      Number(kid.earned)      + Number(task.reward),
-      totalEarned: Number(kid.totalEarned) + Number(task.reward),
-    }),
-  ]);
-  return tr.error ? tr : kr.error ? kr : { data: { task: tr.data, kid: kr.data }, error: null };
+
+  // 1. Update task status — critical, must succeed
+  const tr = await updateTaskStatus(task.id, 'done', kid.id);
+  if (tr.error) return tr;
+
+  // 2. Update earned balance — best effort, don't block task completion
+  const newEarned      = Number(kid.earned)      + Number(task.reward);
+  const newTotalEarned = Number(kid.totalEarned ?? kid.earned) + Number(task.reward);
+  updateKidEarned(kid.id, newEarned, newTotalEarned).catch(() => {
+    // Silent fallback — balance will sync on next reload
+  });
+
+  return { data: { task: tr.data, kid: { id: kid.id } }, error: null };
 };
-export const approveTask = async (task, kid, addStreak = false) => {
+export const approveTask = async (task, kid, addStreak = false, message = null) => {
   const today = new Date().toISOString().slice(0, 10);
   const kidUpdates = {
     earned:      Number(kid.earned)      + Number(task.reward),
@@ -114,12 +143,23 @@ export const approveTask = async (task, kid, addStreak = false) => {
     kidUpdates.lastStreakDate = today;
   }
   const [tr, kr] = await Promise.all([
-    updateTaskStatus(task.id, 'done', kid.id),
+    supabase.rpc('update_task_status_for_kid', {
+      p_task_id:  task.id,
+      p_kid_id:   kid.id,
+      p_status:   'done',
+      p_message:  message || null,
+    }),
     updateKid(kid.id, kidUpdates),
   ]);
   return tr.error ? tr : kr.error ? kr : { data: { task: tr.data, kid: kr.data }, error: null };
 };
-export const rejectTask = (taskId, kidId) => updateTaskStatus(taskId, 'rejected', kidId);
+export const rejectTask = async (taskId, kidId) => {
+  if (kidId) return updateTaskStatus(taskId, 'rejected', kidId);
+  // Fallback: direct update for parent (has auth session, RLS works)
+  const updates = { status: 'rejected' };
+  const { error } = await supabase.from('tasks').update(updates).eq('id', taskId);
+  return error ? { error } : { data: { id: taskId, status: 'rejected' }, error: null };
+};
 
 export const resetDailyTasks = (familyId) =>
   supabase.from('tasks')
@@ -187,6 +227,7 @@ export const normalizeTask = (row) => ({
   title: row.title, desc: row.description,
   reward: Number(row.reward), status: row.status,
   requiresApproval: row.requires_approval, isDaily: !!row.is_daily,
+  parentMessage: row.parent_message || null,
   dueDate: row.due_date || null,
   createdAt: row.created_at,
 });

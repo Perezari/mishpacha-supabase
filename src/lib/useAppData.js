@@ -278,22 +278,30 @@ export function useAppData() {
       const kid  = kids.find(k => k.id === task?.kidId);
       if (!task || !kid) return;
       const newStatus = task.requiresApproval ? 'pending' : 'done';
+      // Optimistic update immediately
       setKids(ks => ks.map(k => k.id !== kid.id ? k : {
         ...k,
         earned:      newStatus === 'done' ? k.earned      + task.reward : k.earned,
-        totalEarned: newStatus === 'done' ? k.totalEarned + task.reward : k.totalEarned,
+        totalEarned: newStatus === 'done' ? (k.totalEarned ?? k.earned) + task.reward : (k.totalEarned ?? k.earned),
         tasks:  k.tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t),
       }));
       const { error } = await db.completeTask(task, kid);
-      if (error) reloadKids();
+      // Only revert if the TASK STATUS update failed (earned is best-effort)
+      if (error) {
+        setKids(ks => ks.map(k => k.id !== kid.id ? k : {
+          ...k,
+          earned:      k.earned - (newStatus === 'done' ? task.reward : 0),
+          totalEarned: (k.totalEarned ?? k.earned) - (newStatus === 'done' ? task.reward : 0),
+          tasks:  k.tasks.map(t => t.id === taskId ? { ...t, status: 'todo' } : t),
+        }));
+      }
     },
 
-    approveTask: async (kidId, taskId) => {
+    approveTask: async (kidId, taskId, message = null) => {
       const kid  = kids.find(k => k.id === kidId);
       const task = kid?.tasks.find(t => t.id === taskId);
       if (!task || !kid) return;
 
-      // Increment streak only once per calendar day — checked in DB
       const today     = new Date().toISOString().slice(0, 10);
       const addStreak = kid.lastStreakDate !== today;
 
@@ -303,17 +311,21 @@ export function useAppData() {
         totalEarned: k.totalEarned + task.reward,
         streak: addStreak ? k.streak + 1 : k.streak,
         lastStreakDate: addStreak ? today : k.lastStreakDate,
-        tasks:  k.tasks.map(t => t.id === taskId ? { ...t, status: 'done' } : t),
+        tasks:  k.tasks.map(t => t.id === taskId
+          ? { ...t, status: 'done', parentMessage: message || null }
+          : t),
       }));
-      const { error } = await db.approveTask(task, kid, addStreak);
+      const { error } = await db.approveTask(task, kid, addStreak, message);
       if (error) reloadKids();
     },
 
     rejectTask: async (kidId, taskId) => {
+      const kid = kids.find(k => k.id === kidId);
+      const task = kid?.tasks.find(t => t.id === taskId);
       setKids(ks => ks.map(k => k.id !== kidId ? k : {
         ...k, tasks: k.tasks.map(t => t.id === taskId ? { ...t, status: 'rejected' } : t),
       }));
-      const { error } = await db.rejectTask(taskId);
+      const { error } = await db.rejectTask(taskId, kidId);
       if (error) reloadKids();
     },
 

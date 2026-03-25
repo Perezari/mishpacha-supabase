@@ -128,6 +128,13 @@ function TaskCard({ task, onComplete, isCompleting, justDone }) {
           </div>
           {task.desc && <div style={{ fontSize: 11, color: '#7B5EA7', marginTop: 2, lineHeight: 1.3 }}>{task.desc}</div>}
           <div style={{ fontSize: 11, fontWeight: 700, color: st.color, marginTop: 3 }}>{st.label}</div>
+          {/* Parent message — shown on done tasks */}
+          {task.status === 'done' && task.parentMessage && (
+            <div style={{ marginTop: 5, padding: '5px 9px', background: 'linear-gradient(135deg,#FFF9C4,#FFF3E0)', borderRadius: 10, border: '1px solid #FFE082', display: 'flex', alignItems: 'flex-start', gap: 5 }}>
+              <span style={{ fontSize: 12, fontFamily: EF, flexShrink: 0 }}>💬</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#E65100', lineHeight: 1.3 }}>{task.parentMessage}</span>
+            </div>
+          )}
         </div>
 
         {/* Reward + CTA */}
