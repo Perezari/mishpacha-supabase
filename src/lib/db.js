@@ -4,7 +4,13 @@
 import { supabase } from './supabase.js';
 
 /* ── AUTH ───────────────────────────────────────────── */
-export const authSignUp   = (email, pass) => supabase.auth.signUp({ email, password: pass });
+export const authSignUp   = (email, pass) => supabase.auth.signUp({
+  email,
+  password: pass,
+  options: {
+    emailRedirectTo: 'https://perezari.github.io/mishpacha-supabase/',
+  },
+});
 export const authSignIn   = (email, pass) => supabase.auth.signInWithPassword({ email, password: pass });
 export const authSignOut  = ()            => supabase.auth.signOut();
 export const getSession   = ()            => supabase.auth.getSession();
