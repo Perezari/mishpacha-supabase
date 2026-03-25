@@ -10,6 +10,23 @@ const Field = ({ t, label, children }) => (
   <div><Lbl t={t}>{label}</Lbl>{children}</div>
 );
 
+const DueDateBadge = ({ dueDate }) => {
+  if (!dueDate) return null;
+  const due  = new Date(dueDate);
+  const now  = new Date();
+  const days = Math.ceil((due - now) / 86400000);
+  const over = days < 0;
+  const soon = days >= 0 && days <= 2;
+  const label = over ? `פג לפני ${Math.abs(days)}d` : days === 0 ? 'היום! ⚡' : `${days} ימים`;
+  return (
+    <span style={{ fontSize: '9px', padding: '1px 6px', borderRadius: '50px', fontWeight: 700, border: '1px solid', display: 'inline-flex', alignItems: 'center', gap: 2,
+      background: over ? '#FFEBEE' : soon ? '#FFF8E1' : '#E8F5E9',
+      color:      over ? '#C62828' : soon ? '#E65100' : '#2E7D32',
+      borderColor:over ? '#FFCDD2' : soon ? '#FFE0B2' : '#C8E6C9',
+    }}>📅 {label}</span>
+  );
+};
+
 /* ════════════════════════════════════════════════
    KID DETAIL
 ════════════════════════════════════════════════ */
@@ -69,6 +86,7 @@ export function KidDetailScreen({ t, kid, onBack, onAddTask, onApprove, onReject
                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                       <span style={{ fontWeight: 700, fontSize: '13px' }}>{task.title}</span>
                       {task.isDaily && <span style={{ fontSize: '9px', background: '#FFF3CD', color: '#856404', padding: '1px 5px', borderRadius: '50px', fontWeight: 700, border: '1px solid #ffc10744' }}>🌅 יומי</span>}
+                      <DueDateBadge dueDate={task.dueDate} />
                     </div>
                     {task.desc && <div style={{ fontSize: '11px', color: t.textLight }}>{task.desc}</div>}
                     <div style={{ fontSize: '11px', color: sm?.c, fontWeight: 700, marginTop: '1px' }}>{sm?.l}</div>
@@ -588,6 +606,7 @@ export function ApprovalsScreen({ t, kids, onApprove, onReject, purchases = [], 
                     <div style={{ fontSize: '13px', fontWeight: 700 }}>{item.title}</div>
                     {item.desc && <div style={{ fontSize: '11px', color: t.textLight }}>{item.desc}</div>}
                     {item.isDaily && <span style={{ fontSize: '9px', background: '#FFF3CD', color: '#856404', padding: '1px 5px', borderRadius: '50px', fontWeight: 700, border: '1px solid #ffc10744' }}>🌅 משימה יומית</span>}
+                    <DueDateBadge dueDate={item.dueDate} />
                   </div>
                   <div style={{ textAlign: 'center', flexShrink: 0 }}>
                     <div style={{ fontSize: '18px', fontWeight: 900, color: t.primary }}>₪{item.reward}</div>
