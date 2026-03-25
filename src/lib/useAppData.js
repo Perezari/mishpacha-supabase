@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import * as db from './db.js';
 import { DAILY_TASKS, SHOP_ITEMS } from '../data.js';
 
-const CHILD_SESSION_KEY = 'mishpacha_child_session';
-const LAST_RESET_KEY    = 'mishpacha_last_reset';
+const CHILD_SESSION_KEY  = 'mishpacha_child_session';
+const LAST_RESET_KEY     = 'mishpacha_last_reset';
 const SHOP_SEEDED_KEY   = 'mishpacha_shop_seeded_'; // + familyId
 
 export function useAppData() {
@@ -289,13 +289,19 @@ export function useAppData() {
       const kid  = kids.find(k => k.id === kidId);
       const task = kid?.tasks.find(t => t.id === taskId);
       if (!task || !kid) return;
+
+      // Increment streak only once per calendar day — checked in DB
+      const today     = new Date().toISOString().slice(0, 10);
+      const addStreak = kid.lastStreakDate !== today;
+
       setKids(ks => ks.map(k => k.id !== kidId ? k : {
         ...k,
         earned: k.earned + task.reward,
-        streak: k.streak + 1,
+        streak: addStreak ? k.streak + 1 : k.streak,
+        lastStreakDate: addStreak ? today : k.lastStreakDate,
         tasks:  k.tasks.map(t => t.id === taskId ? { ...t, status: 'done' } : t),
       }));
-      const { error } = await db.approveTask(task, kid);
+      const { error } = await db.approveTask(task, kid, addStreak);
       if (error) reloadKids();
     },
 

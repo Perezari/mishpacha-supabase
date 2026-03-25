@@ -46,7 +46,8 @@ export const updateKid = (kidId, updates) => {
   if (updates.goalIcon   !== undefined) map.goal_icon   = updates.goalIcon;
   if (updates.goalAmount !== undefined) map.goal_amount = updates.goalAmount;
   if (updates.earned     !== undefined) map.earned      = updates.earned;
-  if (updates.streak     !== undefined) map.streak      = updates.streak;
+  if (updates.streak          !== undefined) map.streak           = updates.streak;
+  if (updates.lastStreakDate  !== undefined) map.last_streak_date = updates.lastStreakDate;
   if (updates.name       !== undefined) map.name        = updates.name;
   if (updates.age        !== undefined) map.age         = updates.age;
   if (updates.avatar     !== undefined) map.avatar      = updates.avatar;
@@ -94,10 +95,16 @@ export const completeTask = async (task, kid) => {
   ]);
   return tr.error ? tr : kr.error ? kr : { data: { task: tr.data, kid: kr.data }, error: null };
 };
-export const approveTask = async (task, kid) => {
+export const approveTask = async (task, kid, addStreak = false) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const kidUpdates = { earned: Number(kid.earned) + Number(task.reward) };
+  if (addStreak) {
+    kidUpdates.streak = kid.streak + 1;
+    kidUpdates.lastStreakDate = today;
+  }
   const [tr, kr] = await Promise.all([
     updateTaskStatus(task.id, 'done', kid.id),
-    updateKid(kid.id, { earned: Number(kid.earned) + Number(task.reward), streak: kid.streak + 1 }),
+    updateKid(kid.id, kidUpdates),
   ]);
   return tr.error ? tr : kr.error ? kr : { data: { task: tr.data, kid: kr.data }, error: null };
 };
@@ -159,7 +166,9 @@ export const normalizeKid = (row) => ({
   id: row.id, familyId: row.family_id, name: row.name, age: row.age, avatar: row.avatar,
   goalName: row.goal_name, goalIcon: row.goal_icon,
   goalAmount: Number(row.goal_amount), earned: Number(row.earned),
-  themeId: row.theme_id, streak: row.streak, tasks: [],
+  themeId: row.theme_id, streak: row.streak,
+  lastStreakDate: row.last_streak_date || null,
+  tasks: [],
 });
 export const normalizeTask = (row) => ({
   id: row.id, kidId: row.kid_id, familyId: row.family_id,
