@@ -22,12 +22,69 @@ const CHILD_NAV = [
   { id: 'settings',  icon: '⚙️', label: 'הגדרות' },
 ];
 
-const Loader = () => (
-  <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg,#F4F6FF,#E8FFF9)', gap: '14px' }}>
-    <span style={{ fontSize: '58px', fontFamily: "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif" }}>👨‍👩‍👧‍👦</span>
-    <div style={{ fontSize: '14px', fontWeight: 700, color: '#5E60CE', fontFamily: "'Heebo',sans-serif" }}>טוען... ⏳</div>
-  </div>
-);
+const EF_LOADER = "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+
+/* ── Beautiful loader — adapts to child/parent theme ── */
+const Loader = ({ isChild = false }) => {
+  const bg    = isChild
+    ? 'linear-gradient(160deg, #3D0066 0%, #5E35B1 50%, #283593 100%)'
+    : 'linear-gradient(145deg, #F4F6FF 0%, #E8FFF9 60%, #FFF4F0 100%)';
+  const color = isChild ? '#FFD54F' : '#5E60CE';
+  const dots  = isChild ? '#7C4DFF' : '#5E60CE';
+
+  return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      background: bg, gap: 20, fontFamily: "'Heebo',sans-serif",
+      direction: 'rtl',
+    }}>
+      {/* Animated emoji */}
+      <div style={{
+        fontSize: 72, fontFamily: EF_LOADER, lineHeight: 1,
+        animation: 'float 2s ease-in-out infinite',
+        filter: isChild ? 'drop-shadow(0 4px 16px rgba(255,213,79,.5))' : 'none',
+      }}>
+        {isChild ? '🚀' : '👨‍👩‍👧‍👦'}
+      </div>
+
+      {/* App name */}
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-.3px', lineHeight: 1.2 }}>
+          <span style={{ color: isChild ? '#7C4DFF' : '#5E60CE' }}>משפחה</span>
+          {' '}
+          <span style={{ color: isChild ? '#00BCD4' : '#48CAE4' }}>במשימה</span>
+        </div>
+        <div style={{ fontSize: 12, color: isChild ? 'rgba(255,255,255,.6)' : '#7070A0', marginTop: 4, fontWeight: 500 }}>
+          {isChild ? 'טוען את המשימות שלך...' : 'טוען נתונים...'}
+        </div>
+      </div>
+
+      {/* Bouncing dots */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{
+            width: 10, height: 10, borderRadius: '50%',
+            background: dots,
+            animation: `bounce .9s ease-in-out ${i * .18}s infinite`,
+            opacity: isChild ? .9 : .7,
+          }}/>
+        ))}
+      </div>
+
+      <style>{`
+        @keyframes bounce {
+          0%,100% { transform: translateY(0); opacity: .4; }
+          50%      { transform: translateY(-10px); opacity: 1; }
+        }
+        @keyframes float {
+          0%,100% { transform: translateY(0); }
+          50%      { transform: translateY(-10px); }
+        }
+      `}</style>
+    </div>
+  );
+};
 
 const ErrorBanner = ({ msg }) => (
   <div style={{ position: 'sticky', top: 0, zIndex: 100, background: '#EF476F', color: '#fff', padding: '9px 16px', fontSize: '13px', fontWeight: 700, textAlign: 'center', direction: 'rtl', fontFamily: "'Heebo',sans-serif" }}>
@@ -85,7 +142,9 @@ export default function App() {
   }, [effT]);
 
   const showLoader = loading && !profile && !childSession;
-  if (showLoader) return <Loader />;
+  // While child session exists but data not yet loaded — show child loader
+  const showChildLoader = loading && !!childSession && kids.length === 0;
+  if (showLoader || showChildLoader) return <Loader isChild={!!(childSession || showChildLoader)} />;
 
   if (!isLoggedIn) return (
     <div style={{ minHeight: '100vh', background: effT.bgGrad, overflowY: 'auto' }}>
