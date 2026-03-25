@@ -11,7 +11,7 @@ const Chip = ({ label, value, color, onClick, badge }) => (
   </div>
 );
 
-export default function ParentDashboard({ t, kids, onNav, onKidSelect }) {
+export default function ParentDashboard({ t, kids, onNav, onKidSelect, pendingPurchases = 0 }) {
   const [tab, setTab] = useState('kids');
 
   const allTasks    = kids.flatMap(k => k.tasks);
@@ -49,7 +49,8 @@ export default function ParentDashboard({ t, kids, onNav, onKidSelect }) {
             { l: 'הוסף משימה', icon: '➕', c: 'rgba(255,255,255,.28)', n: 'addTask'  },
             { l: 'הוסף ילד/ה', icon: '👶', c: 'rgba(255,255,255,.22)', n: 'addChild' },
             { l: 'מטרות',      icon: '🎯', c: 'rgba(255,255,255,.22)', n: 'goals'    },
-            { l: `אישורים${pending > 0 ? ` (${pending})` : ''}`, icon: '✅', c: 'rgba(255,255,255,.22)', n: 'approvals' },
+            { l: `אישורים${pending > 0 ? ` (${pending})` : ''}${pendingPurchases > 0 ? ` +${pendingPurchases}🛍️` : ''}`, icon: '✅', c: 'rgba(255,255,255,.22)', n: 'approvals' },
+            { l: 'חנות', icon: '🛍️', c: 'rgba(255,255,255,.22)', n: 'manageShop' },
           ].map((a, i) => (
             <button key={i} onClick={() => onNav(a.n)} style={{
               display: 'inline-flex', alignItems: 'center', gap: '5px',

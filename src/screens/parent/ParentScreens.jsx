@@ -408,9 +408,11 @@ export function GoalSettingScreen({ t, kids, onSave, onBack }) {
 /* ════════════════════════════════════════════════
    APPROVALS
 ════════════════════════════════════════════════ */
-export function ApprovalsScreen({ t, kids, onApprove, onReject }) {
+export function ApprovalsScreen({ t, kids, onApprove, onReject, purchases = [], onApprovePurchase, onRejectPurchase }) {
   const [celebrating, setCelebrating] = useState(false);
+  const [tab, setTab] = useState('tasks');
   const pending = kids.flatMap(k => k.tasks.filter(x => x.status === 'pending').map(x => ({ ...x, kid: k })));
+  const pendingPurchases = purchases.filter(p => p.status === 'pending');
   const STICKERS = ['🌟','🎉','🏆','💪','🎈','🥳'];
 
   const handleApprove = (ki, ti) => {
@@ -422,11 +424,26 @@ export function ApprovalsScreen({ t, kids, onApprove, onReject }) {
   return (
     <div style={{ background: t.bgGrad, fontFamily: "'Heebo',sans-serif", color: t.text, minHeight: '100%' }}>
       {celebrating && <Confetti />}
-      <Header t={t} title="אישורים ממתינים ⏳" subtitle={`${pending.length} בקשות מחכות לך`}
-        right={<div style={{ background: 'rgba(255,255,255,.25)', borderRadius: '50%', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '15px', border: '2px solid rgba(255,255,255,.4)' }}>{pending.length}</div>}
+      <Header t={t} title="אישורים ממתינים" subtitle={`${pending.length + pendingPurchases.length} בקשות מחכות לך`}
+        right={<div style={{ background: 'rgba(255,255,255,.25)', borderRadius: '50%', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '15px', border: '2px solid rgba(255,255,255,.4)' }}>{pending.length + pendingPurchases.length}</div>}
       />
+      {/* Tabs */}
+      <div style={{ display: 'flex', padding: '10px 14px 0', gap: 6 }}>
+        {[
+          { id: 'tasks',     l: `✅ משימות (${pending.length})`              },
+          { id: 'purchases', l: `🛍️ רכישות (${pendingPurchases.length})`    },
+        ].map(tb => (
+          <button key={tb.id} onClick={() => setTab(tb.id)} style={{
+            flex: 1, padding: '7px 10px', borderRadius: '10px', fontFamily: "'Heebo',sans-serif",
+            fontSize: 12, fontWeight: tab === tb.id ? 800 : 500, border: 'none',
+            background: tab === tb.id ? t.primary : t.progressBg,
+            color: tab === tb.id ? '#fff' : t.textLight,
+            boxShadow: tab === tb.id ? t.btnShadow : 'none',
+          }}>{tb.l}</button>
+        ))}
+      </div>
       <div style={{ padding: '12px 14px' }}>
-        {pending.length === 0
+        {tab === 'tasks' && (pending.length === 0
           ? <EmptyState t={t} icon="🎉" title="הכל מאושר!" sub="אין בקשות ממתינות כרגע" />
           : <>
             <div style={{ fontSize: '12px', color: t.textMid, textAlign: 'center', marginBottom: '10px', padding: '9px', background: t.progressBg, borderRadius: t.radius, lineHeight: 1.5 }}>
@@ -462,7 +479,135 @@ export function ApprovalsScreen({ t, kids, onApprove, onReject }) {
               </div>
             </div>
           </>
-        }
+        )}
+
+        {/* PURCHASES TAB */}
+        {tab === 'purchases' && (
+          pendingPurchases.length === 0
+            ? <EmptyState t={t} icon="🛍️" title="אין רכישות ממתינות" sub="כשילד יבקש לקנות משהו, זה יופיע כאן" />
+            : <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {pendingPurchases.map(p => {
+                  const kid = kids.find(k => k.id === p.kidId);
+                  return (
+                    <div key={p.id} style={{ background: '#fff', borderRadius: t.radius, boxShadow: t.shadow, border: t.cardBorder || 'none', padding: '14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                        <div style={{ fontSize: 32, fontFamily: EF, flexShrink: 0 }}>{p.itemIcon}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 900, fontSize: 14 }}>{kid?.name || 'ילד/ה'}</div>
+                          <div style={{ fontWeight: 700, fontSize: 13, marginTop: 1 }}>{p.itemName}</div>
+                          <div style={{ fontSize: 10, color: t.textLight, marginTop: 2 }}>
+                            {new Date(p.createdAt).toLocaleDateString('he-IL')}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                          <div style={{ fontSize: 18, fontWeight: 900, color: t.primary }}>₪{p.itemPrice}</div>
+                          <div style={{ fontSize: 9, color: t.textLight }}>עלות</div>
+                          <div style={{ fontSize: 9, color: t.textLight }}>יתרה: ₪{kid?.earned || 0}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 7 }}>
+                        <Btn t={t} color={t.secondary} full sm onClick={() => onApprovePurchase?.(p.id)}>✅ אשר רכישה</Btn>
+                        <Btn t={t} color={t.danger}    full sm onClick={() => onRejectPurchase?.(p.id)}>❌ דחה</Btn>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════
+   MANAGE SHOP SCREEN
+════════════════════════════════════════════════ */
+export function ManageShopScreen({ t, shopItems = [], onAdd, onDelete, onBack }) {
+  const [name,    setName]    = useState('');
+  const [icon,    setIcon]    = useState('🎁');
+  const [price,   setPrice]   = useState('');
+  const [saving,  setSaving]  = useState(false);
+  const [err,     setErr]     = useState('');
+
+  const QUICK_ICONS = ['🍦','🍿','🎠','🧸','🎮','🚲','🎪','📱','🎯','🏖️','🎬','🍕','🎨','⚽','🎻','🎁','🛹','🎲'];
+
+  const handleAdd = async () => {
+    if (!name.trim()) { setErr('נא להכניס שם'); return; }
+    if (!price || isNaN(price) || Number(price) <= 0) { setErr('נא להכניס מחיר תקין'); return; }
+    setSaving(true); setErr('');
+    await onAdd({ name: name.trim(), icon, price: Number(price) });
+    setSaving(false);
+    setName(''); setPrice(''); setIcon('🎁');
+  };
+
+  return (
+    <div style={{ background: t.bgGrad, fontFamily: "'Heebo',sans-serif", color: t.text, minHeight: '100%' }}>
+      <Header t={t} title="ניהול החנות 🛍️" back="חזרה" onBack={onBack} />
+      <div style={{ padding: '12px 14px' }}>
+
+        {/* Add new item */}
+        <div style={{ background: '#fff', borderRadius: t.radius, boxShadow: t.shadow, padding: '16px', marginBottom: 12 }}>
+          <div style={{ fontWeight: 800, fontSize: 13, color: t.text, marginBottom: 12 }}>➕ הוסף פריט חדש</div>
+
+          {/* Icon picker */}
+          <div style={{ marginBottom: 10 }}>
+            <Lbl t={t}>בחר אייקון</Lbl>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+              {QUICK_ICONS.map(em => (
+                <button key={em} onClick={() => setIcon(em)} style={{
+                  fontSize: 22, padding: 5, borderRadius: 8,
+                  background: icon === em ? t.primary + '22' : t.progressBg,
+                  border: icon === em ? `2px solid ${t.primary}` : '2px solid transparent',
+                  cursor: 'pointer', fontFamily: "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif",
+                }}>{em}</button>
+              ))}
+            </div>
+            <div style={{ fontSize: 11, color: t.textLight }}>נבחר: <span style={{ fontSize: 18, fontFamily: "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif" }}>{icon}</span> — או הקלד אמוג'י ידנית:</div>
+            <InputF t={t} placeholder="אמוג'י..." value={icon} onChange={e => setIcon(e.target.value)} />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <Field t={t} label="שם הפריט">
+              <InputF t={t} placeholder="לדוגמה: גלידה, יום כיף..." value={name} onChange={e => setName(e.target.value)} />
+            </Field>
+            <div>
+              <Lbl t={t}>מחיר (₪)</Lbl>
+              <div style={{ position: 'relative' }}>
+                <InputF t={t} type="number" placeholder="0" value={price} onChange={e => setPrice(e.target.value)} />
+                <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', fontWeight: 900, color: t.primary, fontSize: 15, pointerEvents: 'none' }}>₪</span>
+              </div>
+            </div>
+            {err && <div style={{ fontSize: 12, color: t.danger, padding: '7px 10px', background: t.danger + '12', borderRadius: t.inputRadius, fontWeight: 600 }}>⚠️ {err}</div>}
+            <Btn t={t} onClick={handleAdd} full disabled={saving} style={{ padding: '11px', fontSize: '13px' }}>
+              {saving ? '⏳ שומר...' : '💾 הוסף לחנות'}
+            </Btn>
+          </div>
+        </div>
+
+        {/* Current items */}
+        <div style={{ background: '#fff', borderRadius: t.radius, boxShadow: t.shadow, padding: '14px' }}>
+          <div style={{ fontWeight: 800, fontSize: 13, color: t.text, marginBottom: 10 }}>
+            🛍️ פריטים בחנות ({shopItems.length})
+          </div>
+          {shopItems.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px', color: t.textLight, fontSize: 13 }}>
+              אין פריטים — הוסף פריט ראשון למעלה
+            </div>
+          ) : shopItems.map(item => (
+            <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: `1px solid ${t.progressBg}` }}>
+              <span style={{ fontSize: 24, fontFamily: "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif", flexShrink: 0 }}>{item.icon}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 13 }}>{item.name}</div>
+                <div style={{ fontSize: 11, color: t.textLight }}>₪{item.price}</div>
+              </div>
+              <button onClick={() => onDelete(item.id)} style={{
+                padding: '5px 11px', background: t.danger + '15', color: t.danger,
+                border: 'none', borderRadius: '50px', fontFamily: "'Heebo',sans-serif",
+                fontSize: 11, fontWeight: 700, cursor: 'pointer',
+              }}>🗑️ מחק</button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

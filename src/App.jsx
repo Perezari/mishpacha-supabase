@@ -6,7 +6,7 @@ import { BottomNav, Sidebar } from './components/Atoms.jsx';
 import LoginScreen     from './screens/Login.jsx';
 import SettingsScreen  from './screens/Settings.jsx';
 import ParentDashboard from './screens/parent/Dashboard.jsx';
-import { KidDetailScreen, AddChildScreen, AddTaskScreen, GoalSettingScreen, ApprovalsScreen, EditChildScreen, DeleteChildModal } from './screens/parent/ParentScreens.jsx';
+import { KidDetailScreen, AddChildScreen, AddTaskScreen, GoalSettingScreen, ApprovalsScreen, EditChildScreen, DeleteChildModal, ManageShopScreen } from './screens/parent/ParentScreens.jsx';
 import { ChildDashboard, BadgesScreen, ShopScreen } from './screens/child/ChildScreens.jsx';
 
 const PARENT_NAV = [
@@ -49,6 +49,7 @@ export default function App() {
   const {
     session, childSession, profile, family, kids,
     loading, error, actions, themeId, role, isLoggedIn,
+    shopItems, purchases,
   } = useAppData();
 
   const [screen, setScreen] = useState('dashboard');
@@ -97,7 +98,9 @@ export default function App() {
   );
 
   /* ── Nav config ─────────────────────── */
-  const pendingCount   = kids.flatMap(k => k.tasks).filter(t => t.status === 'pending').length;
+  const pendingTaskCount     = kids.flatMap(k => k.tasks).filter(t => t.status === 'pending').length;
+  const pendingPurchaseCount = purchases.filter(p => p.status === 'pending').length;
+  const pendingCount         = pendingTaskCount + pendingPurchaseCount;
   const activeNav      = role === 'parent' ? PARENT_NAV : CHILD_NAV;
   const navWithBadge   = activeNav.map(item =>
     item.id === 'approvals' && pendingCount > 0 ? { ...item, badge: pendingCount } : item
@@ -108,13 +111,14 @@ export default function App() {
   const getContent = () => {
     if (role === 'parent') {
       switch (screen) {
-        case 'dashboard':  return <ParentDashboard t={t} kids={kids} onNav={nav} onKidSelect={id => setSelKid(id)} />;
+        case 'dashboard':  return <ParentDashboard t={t} kids={kids} onNav={nav} onKidSelect={id => setSelKid(id)} pendingPurchases={pendingPurchaseCount} />;
         case 'kidDetail':  return <KidDetailScreen t={t} kid={activeKid} onBack={() => nav('dashboard')} onAddTask={() => nav('addTask')} onApprove={(ki,ti) => actions.approveTask(ki,ti)} onReject={(ki,ti) => actions.rejectTask(ki,ti)} onEdit={() => nav('editChild')} onDelete={() => setShowDelete(true)} />;
         case 'editChild':   return <EditChildScreen t={t} kid={activeKid} onBack={() => nav('kidDetail')} onSave={async (updates) => { await actions.updateKidProfile(selKid, updates); }} />;
         case 'addChild':   return <AddChildScreen t={t} onSave={async d => { await actions.addKid(d); nav('dashboard'); }} onBack={() => nav('dashboard')} />;
         case 'addTask':    return <AddTaskScreen t={t} kids={kids} preKidId={selKid} onSave={d => actions.addTask(d)} onBack={() => nav(selKid ? 'kidDetail' : 'dashboard')} />;
         case 'goals':      return <GoalSettingScreen t={t} kids={kids} onSave={({ kidId, goalName, goalIcon, goalAmount }) => actions.setGoal(kidId, { goalName, goalIcon, goalAmount })} onBack={() => nav('dashboard')} />;
-        case 'approvals':  return <ApprovalsScreen t={t} kids={kids} onApprove={(ki,ti) => actions.approveTask(ki,ti)} onReject={(ki,ti) => actions.rejectTask(ki,ti)} />;
+        case 'approvals':  return <ApprovalsScreen t={t} kids={kids} onApprove={(ki,ti) => actions.approveTask(ki,ti)} onReject={(ki,ti) => actions.rejectTask(ki,ti)} purchases={purchases} onApprovePurchase={actions.approvePurchase} onRejectPurchase={actions.rejectPurchase} />;
+        case 'manageShop': return <ManageShopScreen t={t} shopItems={shopItems} onAdd={actions.addShopItem} onDelete={actions.deleteShopItem} onBack={() => nav('dashboard')} />;
         case 'settings':   return <SettingsScreen t={t} user={{ role: 'parent', userId: profile?.id }} family={family} kids={kids} onThemeChange={actions.changeTheme} onLogout={actions.signOut} onUpdateFamilyName={actions.updateFamilyName} onJoinFamily={actions.joinFamily} />;
         default:           return <ParentDashboard t={t} kids={kids} onNav={nav} onKidSelect={id => setSelKid(id)} />;
       }
@@ -123,7 +127,7 @@ export default function App() {
         case 'childHome':
         case 'dashboard':  return <ChildDashboard t={childT} kid={activeKid} onCompleteTask={id => actions.completeTask(id)} onNav={nav} />;
         case 'badges':     return <BadgesScreen t={childT} kid={activeKid} />;
-        case 'shop':       return <ShopScreen t={childT} kid={activeKid} />;
+        case 'shop':       return <ShopScreen t={childT} kid={activeKid} shopItems={shopItems} purchases={purchases} onBuy={actions.buyItem} />;
         case 'settings':   return <SettingsScreen t={childT} user={{ role: 'child', kidId: activeKid?.id }} family={family} kids={kids} onThemeChange={id => actions.changeKidTheme(activeKid?.id, id)} onLogout={actions.signOut} onUpdateFamilyName={actions.updateFamilyName} />;
         default:           return <ChildDashboard t={childT} kid={activeKid} onCompleteTask={id => actions.completeTask(id)} onNav={nav} />;
       }

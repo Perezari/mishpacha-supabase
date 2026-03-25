@@ -6,22 +6,22 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate', // מעדכן את האפליקציה אוטומטית כשיש גרסה חדשה
+      registerType: 'autoUpdate',
       manifest: {
         name: 'משפחה במשימה',
         short_name: 'משפחה במשימה',
         description: 'אפליקציית ניהול משימות למשפחה',
-        theme_color: '#ffffff', // צבע הרקע העליון של האפליקציה
+        theme_color: '#ffffff',
         background_color: '#ffffff',
-        display: 'standalone', // גורם לזה להיראות כמו אפליקציה אמיתית בלי שורת הכתובת
+        display: 'standalone',
         icons: [
           {
-            src: 'pwa-192x192.png', // השם של הקובץ ששמת בתיקיית public
+            src: 'pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'pwa-512x512.png', // השם של הקובץ ששמת בתיקיית public
+            src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png'
           }
@@ -29,5 +29,12 @@ export default defineConfig({
       }
     })
   ],
-  base: '/mishpacha-supabase/' // חשוב להשאיר את זה בשביל GitHub Pages!
+
+  // 👇 זה מה שמוסיף פתיחה אוטומטית של הדפדפן
+  server: {
+    open: true
+  },
+
+  // 👇 אל תשכח את זה בגיטאהב פייג'ס
+  base: '/mishpacha-supabase/'
 })

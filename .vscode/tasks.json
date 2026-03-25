@@ -1,0 +1,28 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Clean Vite Cache",
+      "type": "shell",
+
+      // ★ גרסה שעובדת ב-Windows!
+      "command": "powershell -Command \"Remove-Item -Recurse -Force node_modules/.vite\"",
+
+      "problemMatcher": []
+    },
+    {
+      "label": "Start Dev Server",
+      "type": "shell",
+      "command": "npm run dev",
+      "problemMatcher": []
+    },
+    {
+      "label": "Clean And Start Dev",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Clean Vite Cache",
+        "Start Dev Server"
+      ]
+    }
+  ]
+}
