@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import THEMES from '../themes.js';
 import { Btn, Card, InputF, Lbl } from '../components/Atoms.jsx';
 import * as db from '../lib/db.js';
@@ -35,28 +35,9 @@ export default function LoginScreen({ onParentLogin, onParentSignUp, onChildLogi
   const [kidList,    setKidList]    = useState([]);
   const [pickedKid,  setPickedKid]  = useState(null);
   const [kidLoading, setKidLoading] = useState(false);
-  const autoSubmitRef = useRef(false);
 
-  // Face ID / autofill detection
-  // Called from onChange with the LATEST value (not stale state)
-  const handleAutoSubmit = (newEmail, newPass) => {
-    if (parentMode !== 'login') return;
-    // Use the freshest value from the event + fallback to current state
-    const e = (newEmail !== null ? newEmail : email).trim();
-    const p = (newPass  !== null ? newPass  : pass).trim();
-    if (!e || !p || !e.includes('@') || p.length < 6) return;
-    if (autoSubmitRef.current) return;
-    autoSubmitRef.current = true;
-    setTimeout(async () => {
-      autoSubmitRef.current = false;
-      // Call login directly with the known values — don't rely on stale state
-      setLoading(true);
-      try {
-        const { error } = await onParentLogin(e, p);
-        if (error) setErr(tr(error.message));
-      } finally { setLoading(false); }
-    }, 350);
-  };
+
+  // autoComplete handles Face ID autofill;
 
   const tr = (msg = '') => {
     if (msg.includes('Invalid login'))       return '❌ אימייל או סיסמה שגויים';
@@ -245,15 +226,15 @@ export default function LoginScreen({ onParentLogin, onParentSignUp, onChildLogi
                 ))}
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
+              <form onSubmit={e => { e.preventDefault(); handleParentSubmit(); }} style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
                 <div>
                   <Lbl t={t}>אימייל 📧</Lbl>
-                  <InputF t={t} placeholder="your@email.com" value={email} onChange={e => { setEmail(e.target.value); handleAutoSubmit(e.target.value, null); }} autoComplete="username email" />
+                  <InputF t={t} placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)} autoComplete="username email" />
                 </div>
                 <div>
                   <Lbl t={t}>סיסמה 🔐</Lbl>
                   <div style={{ position: 'relative' }}>
-                    <InputF t={t} type={showPass ? 'text' : 'password'} placeholder="לפחות 6 תווים" value={pass} onChange={e => { setPass(e.target.value); handleAutoSubmit(null, e.target.value); }} autoComplete="current-password" />
+                    <InputF t={t} type={showPass ? 'text' : 'password'} placeholder="לפחות 6 תווים" value={pass} onChange={e => setPass(e.target.value)} autoComplete="current-password" />
                     <span onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', fontSize: '16px', userSelect: 'none', fontFamily: EF }}>
                       {showPass ? '🙈' : '👁️'}
                     </span>
@@ -279,16 +260,23 @@ export default function LoginScreen({ onParentLogin, onParentSignUp, onChildLogi
                   <div style={{ fontSize: '13px', color: t.secondary, padding: '9px 12px', background: t.secondary + '20', borderRadius: t.inputRadius, fontWeight: 600 }}>{info}</div>
                 )}
 
-                <Btn t={t} onClick={handleParentSubmit} full disabled={loading} style={{ padding: '13px', fontSize: '15px', fontWeight: 800, marginTop: '2px' }}>
+                <button type="submit" disabled={loading} style={{
+                  width: '100%', padding: '13px', fontSize: '15px', fontWeight: 800, marginTop: '2px',
+                  background: loading ? t.progressBg : t.primary,
+                  color: loading ? t.textLight : '#fff',
+                  border: 'none', borderRadius: t.btnRadius,
+                  fontFamily: "'Heebo',sans-serif", cursor: loading ? 'not-allowed' : 'pointer',
+                  boxShadow: loading ? 'none' : t.btnShadow,
+                }}>
                   {loading ? '⏳ רגע...' : parentMode === 'login' ? '🚀 כניסה' : parentMode === 'signup' ? '✨ צור חשבון' : '👥 הצטרף'}
-                </Btn>
+                </button>
 
                 {parentMode === 'signup' && (
                   <div style={{ fontSize: '11px', color: t.textLight, textAlign: 'center', padding: '8px', background: t.progressBg, borderRadius: t.inputRadius, lineHeight: 1.5 }}>
                     💡 הרשמה יוצרת משפחה חדשה אוטומטית
                   </div>
                 )}
-              </div>
+              </form>
             </Card>
           </div>
         )}
