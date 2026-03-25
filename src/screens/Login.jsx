@@ -157,7 +157,7 @@ export default function LoginScreen({ onParentLogin, onParentSignUp, onChildLogi
               onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow=t.btnShadow; }}
               onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow=t.shadow; }}
               >
-                <div style={{ fontSize: '46px', lineHeight: 1, marginBottom: '8px', fontFamily: EF }}>👔</div>
+                <div style={{ fontSize: '46px', lineHeight: 1, marginBottom: '8px', fontFamily: EF }}>👨‍👩‍👧</div>
                 <div style={{ fontSize: '17px', fontWeight: 900, color: t.text }}>אני הורה</div>
                 <div style={{ fontSize: '11px', color: t.textLight, marginTop: '3px', fontWeight: 500 }}>
                   כניסה עם<br/>אימייל וסיסמה
@@ -196,7 +196,7 @@ export default function LoginScreen({ onParentLogin, onParentSignUp, onChildLogi
               </button>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-                <span style={{ fontSize: '30px', fontFamily: EF }}>👨‍👩‍👧</span>
+                <span style={{ fontSize: '30px', fontFamily: EF }}>👔</span>
                 <div>
                   <div style={{ fontWeight: 900, fontSize: '17px', color: t.text }}>כניסת הורה</div>
                   <div style={{ fontSize: '12px', color: t.textLight }}>נהל משימות ומטרות לילדים</div>
