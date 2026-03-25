@@ -405,25 +405,109 @@ export function GoalSettingScreen({ t, kids, onSave, onBack }) {
   );
 }
 
+
+/* ── Approval celebration overlay ───────────────────── */
+function ApprovalCelebration({ t, data }) {
+  const EF_L = "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+  const coins = Array.from({ length: 18 }, (_, i) => ({
+    left: `${3 + i * 5.2}%`,
+    delay: `${i * 0.055}s`,
+    dur:   `${0.75 + (i % 4) * 0.15}s`,
+    drift: `${(i % 2 === 0 ? 1 : -1) * (8 + i * 5)}px`,
+    size:  14 + (i % 3) * 5,
+  }));
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+
+      {/* Coin rain */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        {coins.map((c, i) => (
+          <span key={i} style={{
+            position: 'absolute', top: '-24px', left: c.left,
+            fontSize: c.size, fontFamily: EF_L,
+            animationName: 'coinRain', animationDuration: c.dur,
+            animationDelay: c.delay, animationFillMode: 'forwards',
+            animationTimingFunction: 'ease-in',
+            '--drift': c.drift,
+          }}>🪙</span>
+        ))}
+      </div>
+
+      {/* Center card */}
+      <div className="anim-pop" style={{
+        background: '#fff',
+        borderRadius: 28,
+        padding: '28px 36px',
+        textAlign: 'center',
+        boxShadow: `0 30px 80px rgba(0,0,0,.22), 0 0 0 3px ${t.secondary || '#00C853'}33`,
+        maxWidth: 280,
+        width: '90%',
+        position: 'relative',
+        overflow: 'hidden',
+        pointerEvents: 'auto',
+      }}>
+        {/* Top gradient strip */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 6, background: `linear-gradient(90deg, ${t.primary || '#7C4DFF'}, ${t.secondary || '#00C853'})` }}/>
+
+        {/* Avatar bounce */}
+        <div style={{ fontSize: 56, fontFamily: EF_L, lineHeight: 1, marginBottom: 8, animation: 'bounce .7s ease-in-out' }}>
+          {data.avatar || '🧒'}
+        </div>
+
+        {/* Checkmark circle */}
+        <div style={{
+          width: 52, height: 52, borderRadius: '50%',
+          background: `linear-gradient(135deg, ${t.secondary || '#00C853'}, #69F0AE)`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          margin: '0 auto 12px',
+          boxShadow: `0 6px 20px ${t.secondary || '#00C853'}55`,
+          animation: 'pop .4s .15s cubic-bezier(.22,.68,0,1.2) both',
+          fontSize: 26, fontFamily: EF_L,
+        }}>✅</div>
+
+        <div style={{ fontWeight: 900, fontSize: 17, color: '#1A1A2E', marginBottom: 4 }}>
+          כל הכבוד, {data.kidName}! 🎉
+        </div>
+        <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>{data.taskTitle}</div>
+
+        {/* Reward badge */}
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: `linear-gradient(135deg, ${t.primary || '#7C4DFF'}18, ${t.primary || '#7C4DFF'}08)`,
+          border: `2px solid ${t.primary || '#7C4DFF'}33`,
+          borderRadius: 50, padding: '7px 18px',
+          animation: 'pop .4s .3s cubic-bezier(.22,.68,0,1.2) both',
+        }}>
+          <span style={{ fontSize: 20, fontFamily: EF_L }}>🪙</span>
+          <span style={{ fontWeight: 900, fontSize: 18, color: t.primary || '#7C4DFF' }}>+₪{data.reward}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ════════════════════════════════════════════════
    APPROVALS
 ════════════════════════════════════════════════ */
 export function ApprovalsScreen({ t, kids, onApprove, onReject, purchases = [], onApprovePurchase, onRejectPurchase }) {
-  const [celebrating, setCelebrating] = useState(false);
+  const [celebData, setCelebData] = useState(null); // { kidName, taskTitle, reward, avatar }
   const [tab, setTab] = useState('tasks');
   const pending = kids.flatMap(k => k.tasks.filter(x => x.status === 'pending').map(x => ({ ...x, kid: k })));
   const pendingPurchases = purchases.filter(p => p.status === 'pending');
   const STICKERS = ['🌟','🎉','🏆','💪','🎈','🥳'];
 
   const handleApprove = (ki, ti) => {
+    const kid  = kids.find(k => k.id === ki);
+    const task = kid?.tasks.find(t => t.id === ti);
     onApprove(ki, ti);
-    setCelebrating(true);
-    setTimeout(() => setCelebrating(false), 1700);
+    setCelebData({ kidName: kid?.name, taskTitle: task?.title, reward: task?.reward, avatar: kid?.avatar });
+    setTimeout(() => setCelebData(null), 2400);
   };
 
   return (
     <div style={{ background: t.bgGrad, fontFamily: "'Heebo',sans-serif", color: t.text, minHeight: '100%' }}>
-      {celebrating && <Confetti />}
+      {celebData && <ApprovalCelebration t={t} data={celebData} />}
       <Header t={t} title="אישורים ממתינים" subtitle={`${pending.length + pendingPurchases.length} בקשות מחכות לך`}
         right={<div style={{ background: 'rgba(255,255,255,.25)', borderRadius: '50%', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '15px', border: '2px solid rgba(255,255,255,.4)' }}>{pending.length + pendingPurchases.length}</div>}
       />
