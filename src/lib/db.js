@@ -76,27 +76,32 @@ export const createTask = (familyId, task) =>
     reward: task.reward, requires_approval: task.requiresApproval,
     is_daily: task.isDaily ?? false, status: 'todo',
   }).select().single();
-export const updateTaskStatus = (taskId, status) => {
-  const updates = { status };
-  if (status === 'done') updates.completed_at = new Date().toISOString();
-  return supabase.from('tasks').update(updates).eq('id', taskId).select().single();
+// Uses security-definer RPC so children (no auth) can also update their own tasks
+export const updateTaskStatus = async (taskId, status, kidId) => {
+  const { error } = await supabase.rpc('update_task_status_for_kid', {
+    p_task_id: taskId,
+    p_kid_id:  kidId || '00000000-0000-0000-0000-000000000000',
+    p_status:  status,
+  });
+  // Return in same shape as before so callers don't break
+  return error ? { error } : { data: { id: taskId, status }, error: null };
 };
 export const completeTask = async (task, kid) => {
-  if (task.requiresApproval) return updateTaskStatus(task.id, 'pending');
+  if (task.requiresApproval) return updateTaskStatus(task.id, 'pending', kid.id);
   const [tr, kr] = await Promise.all([
-    updateTaskStatus(task.id, 'done'),
+    updateTaskStatus(task.id, 'done', kid.id),
     updateKid(kid.id, { earned: Number(kid.earned) + Number(task.reward) }),
   ]);
   return tr.error ? tr : kr.error ? kr : { data: { task: tr.data, kid: kr.data }, error: null };
 };
 export const approveTask = async (task, kid) => {
   const [tr, kr] = await Promise.all([
-    updateTaskStatus(task.id, 'done'),
+    updateTaskStatus(task.id, 'done', kid.id),
     updateKid(kid.id, { earned: Number(kid.earned) + Number(task.reward), streak: kid.streak + 1 }),
   ]);
   return tr.error ? tr : kr.error ? kr : { data: { task: tr.data, kid: kr.data }, error: null };
 };
-export const rejectTask = (taskId) => updateTaskStatus(taskId, 'rejected');
+export const rejectTask = (taskId, kidId) => updateTaskStatus(taskId, 'rejected', kidId);
 
 export const resetDailyTasks = (familyId) =>
   supabase.from('tasks')
