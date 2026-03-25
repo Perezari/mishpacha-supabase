@@ -25,49 +25,46 @@ const CHILD_NAV = [
 const EF_LOADER = "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
 
 /* ── Beautiful loader — adapts to child/parent theme ── */
-const Loader = ({ isChild = false }) => {
-  const bg    = isChild
+const Loader = ({ isChild = false, bg, primary }) => {
+  // Both parent and child get the beautiful dark gradient loader
+  const bgGrad = bg || (isChild
     ? 'linear-gradient(160deg, #3D0066 0%, #5E35B1 50%, #283593 100%)'
-    : 'linear-gradient(145deg, #F4F6FF 0%, #E8FFF9 60%, #FFF4F0 100%)';
-  const color = isChild ? '#FFD54F' : '#5E60CE';
-  const dots  = isChild ? '#7C4DFF' : '#5E60CE';
+    : 'linear-gradient(160deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%)');
+  const col  = primary || (isChild ? '#7C4DFF' : '#5E60CE');
+  const emoji = isChild ? '🚀' : '👔';
 
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
-      background: bg, gap: 20, fontFamily: "'Heebo',sans-serif",
+      background: bgGrad, gap: 20, fontFamily: "'Heebo',sans-serif",
       direction: 'rtl',
     }}>
-      {/* Animated emoji */}
       <div style={{
         fontSize: 72, fontFamily: EF_LOADER, lineHeight: 1,
         animation: 'float 2s ease-in-out infinite',
-        filter: isChild ? 'drop-shadow(0 4px 16px rgba(255,213,79,.5))' : 'none',
+        filter: 'drop-shadow(0 4px 20px rgba(255,255,255,.2))',
       }}>
-        {isChild ? '🚀' : '👨‍👩‍👧‍👦'}
+        {emoji}
       </div>
 
-      {/* App name */}
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-.3px', lineHeight: 1.2 }}>
-          <span style={{ color: isChild ? '#7C4DFF' : '#5E60CE' }}>משפחה</span>
+          <span style={{ color: col }}>משפחה</span>
           {' '}
-          <span style={{ color: isChild ? '#00BCD4' : '#48CAE4' }}>במשימה</span>
+          <span style={{ color: '#00BCD4' }}>במשימה</span>
         </div>
-        <div style={{ fontSize: 12, color: isChild ? 'rgba(255,255,255,.6)' : '#7070A0', marginTop: 4, fontWeight: 500 }}>
-          {isChild ? 'טוען את המשימות שלך...' : 'טוען נתונים...'}
+        <div style={{ fontSize: 12, color: 'rgba(255,255,255,.55)', marginTop: 4, fontWeight: 500 }}>
+          {isChild ? 'טוען את המשימות שלך...' : 'מתחבר...'}
         </div>
       </div>
 
-      {/* Bouncing dots */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         {[0, 1, 2].map(i => (
           <div key={i} style={{
             width: 10, height: 10, borderRadius: '50%',
-            background: dots,
+            background: col,
             animation: `bounce .9s ease-in-out ${i * .18}s infinite`,
-            opacity: isChild ? .9 : .7,
           }}/>
         ))}
       </div>
@@ -133,7 +130,9 @@ export default function App() {
   /* ── PWA Dynamic Theme Color ──────────── */
   useEffect(() => {
     if (!effT) return;
-    const match = effT.bgGrad.match(/#[0-9a-fA-F]{3,8}/);
+    // Use headerGrad for richer notch color on parent themes
+    const gradStr  = effT.headerGrad || effT.bgGrad;
+    const match    = gradStr.match(/#[0-9a-fA-F]{3,8}/);
     const topColor = match ? match[0] : (effT.primary || '#ffffff');
     let meta = document.querySelector('meta[name="theme-color"]');
     if (!meta) { meta = document.createElement('meta'); meta.name = 'theme-color'; document.head.appendChild(meta); }
@@ -144,7 +143,7 @@ export default function App() {
   const showLoader = loading && !profile && !childSession;
   // While child session exists but data not yet loaded — show child loader
   const showChildLoader = loading && !!childSession && kids.length === 0;
-  if (showLoader || showChildLoader) return <Loader isChild={!!(childSession || showChildLoader)} />;
+  if (showLoader || showChildLoader) return <Loader isChild={!!(childSession || showChildLoader)} bg={effT?.bgGrad} primary={effT?.primary} />;
 
   if (!isLoggedIn) return (
     <div style={{ minHeight: '100vh', background: effT.bgGrad, overflowY: 'auto' }}>
