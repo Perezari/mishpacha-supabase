@@ -61,6 +61,10 @@ export const createKid = (familyId, kid) =>
     goal_icon: kid.goalIcon || '🎯', goal_amount: kid.goalAmount || 100,
     earned: 0, streak: 0, sort_order: kid.sortOrder || 0,
   }).select().single();
+// Uses RPC so child (no auth session) can save their theme preference
+export const updateKidTheme = (kidId, themeId) =>
+  supabase.rpc('update_kid_theme', { p_kid_id: kidId, p_theme_id: themeId });
+
 export const deleteKid = (kidId) => supabase.from('kids').delete().eq('id', kidId);
 export const updateKidProfile = (kidId, updates) => {
   const map = {};

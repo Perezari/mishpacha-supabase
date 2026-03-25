@@ -220,8 +220,10 @@ export function useAppData() {
       await db.updateProfile(session.user.id, { theme_id: tid });
     },
     changeKidTheme: async (kidId, tid) => {
+      // Optimistic update immediately
       setKids(ks => ks.map(k => k.id === kidId ? { ...k, themeId: tid } : k));
-      await db.updateKid(kidId, { themeId: tid });
+      // Use RPC so child (no auth session) can also save their theme
+      await db.updateKidTheme(kidId, tid);
     },
     updateFamilyName: async (name) => {
       if (!family?.id) return;
