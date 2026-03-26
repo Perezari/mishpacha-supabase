@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import * as db from './db.js';
 import { DAILY_TASKS, SHOP_ITEMS } from '../data.js';
 
@@ -24,10 +24,18 @@ export function useAppData() {
     : (profile?.theme_id || 'C');
 
   /* ── Daily reset ─────────────────────────────────── */
-  const checkAndResetDaily = async (fid) => {
+  // Returns the "reset date" string: the calendar date whose 08:00 has already passed.
+  // Before 08:00 → yesterday's date (reset hasn't happened yet today).
+  // After  08:00 → today's date     (reset has happened today).
+  const getResetDateKey = () => {
     const now = new Date();
-    now.setHours(now.getHours() - 8);
-    const logicalToday = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const resetToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0);
+    const base = now >= resetToday ? now : new Date(now - 86400000); // yesterday
+    return `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}-${String(base.getDate()).padStart(2,'0')}`;
+  };
+
+  const checkAndResetDaily = async (fid) => {
+    const logicalToday = getResetDateKey();
     const last = localStorage.getItem(LAST_RESET_KEY);
     if (last === logicalToday) return;
     try {
@@ -128,6 +136,18 @@ export function useAppData() {
     if (familyId) reloadForFamily(familyId);
   }, [familyId]);
 
+  // Stable ref so realtime callbacks always call the latest version
+  // without the subscription needing to re-subscribe on every render.
+  const reloadForFamilyRef = useRef(reloadForFamily);
+  useEffect(() => { reloadForFamilyRef.current = reloadForFamily; });
+
+  const stableReloadKids   = useCallback(() => {
+    if (familyId) reloadForFamilyRef.current(familyId);
+  }, [familyId]);
+  const stableReloadFamily = useCallback(() => {
+    if (familyId) reloadForFamilyRef.current(familyId);
+  }, [familyId]);
+
   /* ── Boot ────────────────────────────────────────── */
   useEffect(() => {
     const saved = localStorage.getItem(CHILD_SESSION_KEY);
@@ -162,10 +182,10 @@ export function useAppData() {
   /* ── Realtime ────────────────────────────────────── */
   useEffect(() => {
     if (!familyId) return;
-    const ts  = db.subscribeToTasks(familyId,     reloadKids);
-    const ks  = db.subscribeToKids(familyId,      reloadKids);
-    const ps  = db.subscribeToPurchases(familyId, () => reloadForFamily(familyId));
-    const sis = db.subscribeToShopItems(familyId, () => reloadForFamily(familyId));
+    const ts  = db.subscribeToTasks(familyId,     stableReloadKids);
+    const ks  = db.subscribeToKids(familyId,      stableReloadKids);
+    const ps  = db.subscribeToPurchases(familyId, stableReloadFamily);
+    const sis = db.subscribeToShopItems(familyId, stableReloadFamily);
     return () => { ts.unsubscribe(); ks.unsubscribe(); ps.unsubscribe(); sis.unsubscribe(); };
   }, [familyId]);
 

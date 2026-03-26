@@ -50,6 +50,7 @@ export default function ParentDashboard({ t, kids, onNav, onKidSelect, onApprove
             { l: 'הוסף ילד/ה', icon: '👶', c: 'rgba(255,255,255,.22)', n: 'addChild' },
             { l: 'מטרות',      icon: '🎯', c: 'rgba(255,255,255,.22)', n: 'goals'    },
             { l: `אישורים${pending > 0 ? ` (${pending})` : ''}`, icon: '✅', c: 'rgba(255,255,255,.22)', n: 'approvals' },
+            { l: 'ניהול חנות', icon: '🛍️', c: 'rgba(255,255,255,.22)', n: 'manageShop' },
           ].map((a, i) => (
             <button key={i} onClick={() => onNav(a.n)} style={{
               display: 'inline-flex', alignItems: 'center', gap: '5px',

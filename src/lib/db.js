@@ -230,6 +230,7 @@ export const normalizeTask = (row) => ({
   parentMessage: row.parent_message || null,
   dueDate: row.due_date || null,
   createdAt: row.created_at,
+  completedAt: row.completed_at || null,
 });
 export const normalizeShopItem = (row) => ({
   id: row.id, familyId: row.family_id,

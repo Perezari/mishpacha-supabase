@@ -8,7 +8,7 @@
 //  · Progress bar visible even at 0%
 // ═══════════════════════════════════════════════════════
 import { useState, useCallback } from 'react';
-import { SHOP_ITEMS, ALL_BADGES } from '../../data.js';
+import { ALL_BADGES } from '../../data.js';
 
 const EF = "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
 
@@ -178,7 +178,16 @@ function getWeeklyEarnings(tasks,weeks=6){
     const s=new Date(now); s.setDate(s.getDate()-(w+1)*7);
     const e=new Date(now); e.setDate(e.getDate()-w*7);
     const label=w===0?'השבוע':w===1?'שבוע שעבר':`לפני ${w}`;
-    const sum=tasks.filter(t=>t.status==='done'&&t.createdAt).filter(t=>{const d=new Date(t.createdAt);return d>=s&&d<e;}).reduce((s,t)=>s+t.reward,0);
+    // Use completedAt for done tasks; fall back to createdAt for older data
+    const sum=tasks
+      .filter(t=>t.status==='done')
+      .filter(t=>{
+        const dateStr = t.completedAt || t.createdAt;
+        if (!dateStr) return false;
+        const d=new Date(dateStr);
+        return d>=s&&d<e;
+      })
+      .reduce((s,t)=>s+t.reward,0);
     result.push({label,sum});
   }
   return result;
@@ -564,31 +573,52 @@ export function BadgesScreen({ t, kid }) {
 /* ════════════════════════════════════════════════════
    SHOP SCREEN
 ════════════════════════════════════════════════════ */
-export function ShopScreen({ t, kid }) {
-  const [bought,    setBought]    = useState([]);
+export function ShopScreen({ t, kid, shopItems = [], purchases = [], onBuy }) {
   const [flashItem, setFlashItem] = useState(null);
   const [showRain,  setShowRain]  = useState(false);
+  const [buyingId,  setBuyingId]  = useState(null);
+  const [errMsg,    setErrMsg]    = useState('');
 
   if (!kid) return null;
 
   const isGame     = !!t.isGame;
   const hdrText    = isGame ? '#fff' : (t.text || '#1A1A2E');
   const hdrSubText = isGame ? 'rgba(255,255,255,.72)' : (t.textLight || '#888');
-  const spent     = bought.reduce((s, id) => { const it = SHOP_ITEMS.find(i => i.id === id); return s + (it?.price || 0); }, 0);
-  const available = kid.earned - spent;
+
+  // Pending purchases reduce available balance (parent hasn't approved yet)
+  const kidPurchases = purchases.filter(p => p.kidId === kid.id);
+  const pendingSpend = kidPurchases
+    .filter(p => p.status === 'pending')
+    .reduce((s, p) => s + p.itemPrice, 0);
+  const available = kid.earned - pendingSpend;
+
   const primary   = t.primary || '#7C4DFF';
   const barGrad   = t.progressGrad || 'linear-gradient(90deg,#7C4DFF,#00BCD4)';
 
-  // Distinct accent per slot — always colored regardless of affordability
   const ACCENTS = ['#7C4DFF','#00BCD4','#FF9800','#E91E63','#4CAF50','#FF5722','#3F51B5','#009688'];
 
-  const buy = item => {
-    if (available < item.price || bought.includes(item.id)) return;
-    setBought(b => [...b, item.id]);
-    setFlashItem(item);
-    setShowRain(true);
-    setTimeout(() => { setFlashItem(null); setShowRain(false); }, 1600);
+  const buy = async (item) => {
+    if (buyingId) return;
+    // Check if already has a pending/approved purchase for this item
+    const alreadyBought = kidPurchases.some(
+      p => p.itemName === item.name && (p.status === 'pending' || p.status === 'approved')
+    );
+    if (alreadyBought || available < item.price) return;
+    setBuyingId(item.id);
+    setErrMsg('');
+    const result = await onBuy(item);
+    setBuyingId(null);
+    if (result?.error === 'insufficient') {
+      setErrMsg('אין מספיק מטבעות');
+      setTimeout(() => setErrMsg(''), 2500);
+    } else if (!result?.error) {
+      setFlashItem(item);
+      setShowRain(true);
+      setTimeout(() => { setFlashItem(null); setShowRain(false); }, 1600);
+    }
   };
+
+  const displayItems = shopItems.length > 0 ? shopItems : [];
 
   return (
     <div style={{ background: t.bgGrad, minHeight: '100%', fontFamily: "'Heebo',sans-serif", display: 'flex', flexDirection: 'column' }}>
@@ -601,6 +631,7 @@ export function ShopScreen({ t, kid }) {
             <div style={{ fontSize: 68, fontFamily: EF, animation: 'starBurst .5s ease-out' }}>{flashItem.icon}</div>
             <div style={{ fontWeight: 900, fontSize: 19, color: '#1A0033', marginTop: 9 }}>נקנה! 🎉</div>
             <div style={{ fontSize: 13, color: primary, marginTop: 4, fontWeight: 700 }}>{flashItem.name}</div>
+            <div style={{ fontSize: 11, color: '#7B5EA7', marginTop: 6 }}>ממתין לאישור הורה ⏳</div>
           </div>
         </div>
       )}
@@ -628,10 +659,15 @@ export function ShopScreen({ t, kid }) {
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 11, color: '#7B5EA7', marginBottom: 2 }}>צברת: <strong style={{ color: primary }}>₪{kid.earned}</strong></div>
-            <div style={{ fontSize: 11, color: '#7B5EA7' }}>קנית: <strong>₪{spent}</strong></div>
+            {pendingSpend > 0 && <div style={{ fontSize: 11, color: '#FF9800' }}>ממתין: <strong>₪{pendingSpend}</strong></div>}
           </div>
         </div>
-        {available < 5 && (
+        {errMsg && (
+          <div style={{ marginTop: 8, padding: '8px 14px', background: '#FFEBEE', borderRadius: 12, fontSize: 12, color: '#C62828', fontWeight: 700, textAlign: 'center' }}>
+            ⚠️ {errMsg}
+          </div>
+        )}
+        {available < 5 && !errMsg && (
           <div style={{ marginTop: 8, padding: '8px 14px', background: 'rgba(255,255,255,.18)', borderRadius: 12, fontSize: 11, color: primary, fontWeight: 700, textAlign: 'center', border: `1px solid ${primary}44` }}>
             💡 השלם עוד משימות כדי לצבור מטבעות!
           </div>
@@ -647,54 +683,88 @@ export function ShopScreen({ t, kid }) {
           <span style={{ fontFamily: EF }}>🎁</span> מה אפשר לקנות?
         </div>
 
-        <div className="shop-grid">
-          {SHOP_ITEMS.map((item, idx) => {
-            const canBuy    = available >= item.price;
-            const wasBought = bought.includes(item.id);
-            const accent    = ACCENTS[idx % ACCENTS.length];
+        {displayItems.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '32px 20px', color: '#7B5EA7' }}>
+            <div style={{ fontSize: 42, fontFamily: EF, marginBottom: 10 }}>🛒</div>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>החנות ריקה</div>
+            <div style={{ fontSize: 12, marginTop: 4 }}>ההורים יוסיפו פריטים בקרוב!</div>
+          </div>
+        ) : (
+          <div className="shop-grid">
+            {displayItems.map((item, idx) => {
+              const canBuy = available >= item.price;
+              const myPurchase = kidPurchases.find(
+                p => p.itemName === item.name && (p.status === 'pending' || p.status === 'approved')
+              );
+              const wasBought  = !!myPurchase;
+              const isPending  = myPurchase?.status === 'pending';
+              const isApproved = myPurchase?.status === 'approved';
+              const accent     = ACCENTS[idx % ACCENTS.length];
+              const isBuying   = buyingId === item.id;
 
-            return (
-              <div key={item.id} className={`shop-card ${canBuy && !wasBought ? 'available' : ''}`}
-                onClick={() => buy(item)}
-                style={{ cursor: canBuy && !wasBought ? 'pointer' : 'default' }}
-              >
-                {/* Colored stripe — always shown */}
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 5, background: accent, borderRadius: '20px 20px 0 0' }}/>
+              return (
+                <div key={item.id} className={`shop-card ${canBuy && !wasBought ? 'available' : ''}`}
+                  onClick={() => !wasBought && buy(item)}
+                  style={{ cursor: canBuy && !wasBought && !isBuying ? 'pointer' : 'default' }}
+                >
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 5, background: accent, borderRadius: '20px 20px 0 0' }}/>
 
-                {/* Emoji icon — NO grayscale, just opacity if locked */}
-                <div style={{
-                  fontSize: 36, fontFamily: EF, display: 'block',
-                  marginBottom: 7, marginTop: 5,
-                  opacity: canBuy || wasBought ? 1 : .55,
-                  animation: canBuy && !wasBought ? 'floatB 3.5s ease-in-out infinite' : 'none',
-                }}>{item.icon}</div>
+                  <div style={{
+                    fontSize: 36, fontFamily: EF, display: 'block',
+                    marginBottom: 7, marginTop: 5,
+                    opacity: canBuy || wasBought ? 1 : .55,
+                    animation: canBuy && !wasBought ? 'floatB 3.5s ease-in-out infinite' : 'none',
+                  }}>{item.icon}</div>
 
-                <div style={{ fontWeight: 700, fontSize: 12, color: '#1A0033', marginBottom: 5 }}>{item.name}</div>
+                  <div style={{ fontWeight: 700, fontSize: 12, color: '#1A0033', marginBottom: 5 }}>{item.name}</div>
 
-                {/* Price — colored even when locked */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center', marginBottom: 9 }}>
-                  <span style={{ fontFamily: EF, fontSize: 13 }}>🪙</span>
-                  <span style={{ fontWeight: 900, fontSize: 14, color: accent }}>₪{item.price}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center', marginBottom: 9 }}>
+                    <span style={{ fontFamily: EF, fontSize: 13 }}>🪙</span>
+                    <span style={{ fontWeight: 900, fontSize: 14, color: accent }}>₪{item.price}</span>
+                  </div>
+
+                  <button style={{
+                    width: '100%', padding: '8px 4px',
+                    border: 'none', borderRadius: 50,
+                    background: isApproved ? '#E8F5E9'
+                      : isPending  ? '#FFF8E1'
+                      : isBuying   ? '#EEE'
+                      : canBuy     ? `linear-gradient(135deg, ${accent}, ${accent}CC)`
+                      : '#F0F0F0',
+                    color: isApproved ? '#00C853' : isPending ? '#E65100' : canBuy && !isBuying ? '#fff' : '#999',
+                    fontFamily: "'Heebo',sans-serif",
+                    fontSize: 11, fontWeight: 800,
+                    cursor: canBuy && !wasBought && !isBuying ? 'pointer' : 'default',
+                    boxShadow: canBuy && !wasBought ? `0 5px 14px ${accent}44` : 'none',
+                  }}>
+                    {isApproved ? '✅ אושר!' : isPending ? '⏳ ממתין לאישור' : isBuying ? '...' : canBuy ? '🛒 קנה!' : '🔒 צריך עוד'}
+                  </button>
                 </div>
+              );
+            })}
+          </div>
+        )}
 
-                <button style={{
-                  width: '100%', padding: '8px 4px',
-                  border: 'none', borderRadius: 50,
-                  background: wasBought ? '#E8F5E9'
-                    : canBuy ? `linear-gradient(135deg, ${accent}, ${accent}CC)`
-                    : '#F0F0F0',
-                  color: wasBought ? '#00C853' : canBuy ? '#fff' : '#999',
-                  fontFamily: "'Heebo',sans-serif",
-                  fontSize: 11, fontWeight: 800,
-                  cursor: canBuy && !wasBought ? 'pointer' : 'default',
-                  boxShadow: canBuy && !wasBought ? `0 5px 14px ${accent}44` : 'none',
-                }}>
-                  {wasBought ? '✅ נקנה!' : canBuy ? '🛒 קנה!' : '🔒 צריך עוד'}
-                </button>
+        {/* Purchase history */}
+        {kidPurchases.length > 0 && (
+          <div style={{ marginTop: 18 }}>
+            <div style={{ fontWeight: 800, fontSize: 13, color: '#1A0033', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontFamily: EF }}>📋</span> רכישות שביצעת
+            </div>
+            {kidPurchases.map(p => (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', borderRadius: 14, padding: '10px 13px', marginBottom: 7, boxShadow: '0 2px 8px rgba(0,0,0,.06)' }}>
+                <span style={{ fontSize: 22, fontFamily: EF }}>{p.itemIcon}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 12, color: '#1A0033' }}>{p.itemName}</div>
+                  <div style={{ fontSize: 10, color: '#7B5EA7', marginTop: 1 }}>₪{p.itemPrice}</div>
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: p.status === 'approved' ? '#00C853' : p.status === 'rejected' ? '#FF3D57' : '#FF9800' }}>
+                  {p.status === 'approved' ? '✅ אושר' : p.status === 'rejected' ? '❌ נדחה' : '⏳ ממתין'}
+                </div>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

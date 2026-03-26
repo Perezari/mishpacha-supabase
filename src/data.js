@@ -47,7 +47,7 @@ export const ALL_BADGES = (done, pct, streak, earned) => [
   { icon: '💪', name: 'גיבור עבודה',  earned: done >= 20    },
   { icon: '🎯', name: 'צלף המטרות',   earned: pct >= 90     },
   { icon: '🌈', name: 'צובר ניסיון',  earned: earned >= 50  },
-  { icon: '🚀', name: 'לרקיע שחקים', earned: earned >= 100 },
+  { icon: '🚀', name: 'מרקיע שחקים', earned: earned >= 100 },
   { icon: '🎁', name: 'מלך/ת מתנות', earned: false         },
 ];
 
